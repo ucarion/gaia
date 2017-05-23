@@ -1,0 +1,7 @@
+assets/noaa_globe
+out/
+
+# Default Rust stuff
+target/
+**/*.rs.bk
+Cargo.lock

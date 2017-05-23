@@ -1,0 +1,10 @@
+[package]
+name = "gaia"
+version = "0.1.0"
+authors = ["Ulysse Carion <ulysse@ulysse.io>"]
+
+[dependencies]
+byteorder = "1"
+image = "0.13"
+piston_window = "0.66"
+pistoncore-sdl2_window = "0.42.0"
