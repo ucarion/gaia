@@ -64,13 +64,14 @@ gfx_pipeline!( pipe {
 });
 
 fn main() {
-    let mut window: PistonWindow<Sdl2Window> =
-        WindowSettings::new("piston: cube", [640, 480])
+    let mut window: PistonWindow<Sdl2Window> = WindowSettings::new("Gaia", [640, 480])
         .exit_on_esc(true)
         .samples(4)
         .opengl(OpenGL::V3_2)
         .build()
         .unwrap();
+
+    window.set_capture_cursor(true);
 
     let ref mut factory = window.factory.clone();
 
@@ -80,12 +81,12 @@ fn main() {
         pipe::new(),
     ).unwrap();
 
-    let (vertex_data, index_data) = get_vertex_data(0.0);
+    let (vertex_data, index_data) = get_vertex_data();
     let index_data: &[u16] = &index_data; // TODO do I really have to do this?
     let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&vertex_data, index_data);
 
     let model = vecmath::mat4_id();
-    let mut camera_controller = FirstPerson::new([0.5, 0.5, 4.0], FirstPersonSettings::keyboard_wasd());
+    let mut camera_controller = FirstPerson::new([0.0, 0.0, 4.0], FirstPersonSettings::keyboard_wasd());
     let projection = CameraPerspective {
         fov: 90.0,
         near_clip: 0.1,
@@ -138,50 +139,43 @@ fn main() {
     }
 }
 
-fn get_vertex_data(time: f32) -> (Vec<Vertex>, Vec<u16>) {
-    let r = 1.0 + time.sin() * 0.5;
-
-    let index_data = vec![
-         0,  1,  2,  2,  3,  0, // top
-         4,  6,  5,  6,  4,  7, // bottom
-         8,  9, 10, 10, 11,  8, // right
-        12, 14, 13, 14, 12, 15, // left
-        16, 18, 17, 18, 16, 19, // front
-        20, 21, 22, 22, 23, 20, // back
+fn get_vertex_data() -> (Vec<Vertex>, Vec<u16>) {
+    let height_data = vec![
+        vec![0.0, 0.0, 0.0],
+        vec![0.5, 1.0, 0.0],
+        vec![0.0, 0.5, 0.5],
+        vec![0.0, 0.5, 0.0],
     ];
 
-    let vertex_data = vec![
-        //top (0, 0, 1)
-        Vertex::new([-r, -r,  r], [0, 0]),
-        Vertex::new([ r, -r,  r], [1, 0]),
-        Vertex::new([ r,  r,  r], [1, 1]),
-        Vertex::new([-r,  r,  r], [0, 1]),
-        //bottom (0, 0r -1r
-        Vertex::new([ r,  r, -r], [0, 0]),
-        Vertex::new([-r,  r, -r], [1, 0]),
-        Vertex::new([-r, -r, -r], [1, 1]),
-        Vertex::new([ r, -r, -r], [0, 1]),
-        //right (1, 0,r0)
-        Vertex::new([ r, -r, -r], [0, 0]),
-        Vertex::new([ r,  r, -r], [1, 0]),
-        Vertex::new([ r,  r,  r], [1, 1]),
-        Vertex::new([ r, -r,  r], [0, 1]),
-        //left (-1, 0,r0)
-        Vertex::new([-r,  r,  r], [0, 0]),
-        Vertex::new([-r, -r,  r], [1, 0]),
-        Vertex::new([-r, -r, -r], [1, 1]),
-        Vertex::new([-r,  r, -r], [0, 1]),
-        //front (0, 1,r0)
-        Vertex::new([-r,  r, -r], [0, 0]),
-        Vertex::new([ r,  r, -r], [1, 0]),
-        Vertex::new([ r,  r,  r], [1, 1]),
-        Vertex::new([-r,  r,  r], [0, 1]),
-        //back (0, -1,r0)
-        Vertex::new([ r, -r,  r], [0, 0]),
-        Vertex::new([-r, -r,  r], [1, 0]),
-        Vertex::new([-r, -r, -r], [1, 1]),
-        Vertex::new([ r, -r, -r], [0, 1]),
-    ];
+    let height = height_data.len();
+    let width = height_data[0].len();
+
+    let mut vertex_data = Vec::new();
+    let mut index_data = Vec::new();
+
+    for y in 0..height - 1 {
+        for x in 0..width - 1 {
+            let top_left = height_data[y][x];
+            let top_right = height_data[y][x + 1];
+            let bot_left = height_data[y + 1][x];
+            let bot_right = height_data[y + 1][x + 1];
+
+            let next_index = vertex_data.len() as u16;
+
+            let x = x as f32;
+            let y = y as f32;
+
+            vertex_data.push(Vertex::new([x, -y, top_left], [0, 0]));
+            vertex_data.push(Vertex::new([x + 1.0, -y, top_right], [0, 1]));
+            vertex_data.push(Vertex::new([x, -y - 1.0, bot_left], [1, 0]));
+            vertex_data.push(Vertex::new([x + 1.0, -y - 1.0, bot_right], [1, 1]));
+
+            index_data.extend([next_index + 0, next_index + 1, next_index + 2].iter().cloned());
+            index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
+        }
+    }
+
+    println!("{:?}", vertex_data);
 
     (vertex_data, index_data)
 }
