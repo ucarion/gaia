@@ -1,7 +1,7 @@
 #version 150 core
 
 in vec3 a_pos;
-in ivec2 a_tex_coord;
+in vec2 a_tex_coord;
 out vec2 v_TexCoord;
 uniform mat4 u_model_view_proj;
 

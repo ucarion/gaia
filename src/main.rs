@@ -2,6 +2,7 @@ extern crate byteorder;
 extern crate camera_controllers;
 #[macro_use]
 extern crate gfx;
+extern crate image;
 extern crate piston_window;
 extern crate sdl2_window;
 extern crate vecmath;
@@ -12,25 +13,26 @@ use std::fs::File;
 use byteorder::{LittleEndian, ReadBytesExt};
 use camera_controllers::{FirstPerson, FirstPersonSettings, CameraPerspective};
 use gfx::traits::*;
+use image::GenericImage;
 use piston_window::*;
 use sdl2_window::Sdl2Window;
 
-fn get_elevation_data() -> Vec<Vec<f32>> {
+fn get_elevation_data() -> Vec<Vec<i16>> {
     println!("Getting elevation data...");
+    let elev_data_width = 8640;
+    let elev_data_height = 4320;
+
     let compression_factor = 8;
 
-    let elev_data_width = 10800;
-    let elev_data_height = 6000;
+    let result_width = elev_data_width / compression_factor;
+    let result_height = elev_data_height / compression_factor;
 
-    let image_width = elev_data_width / compression_factor;
-    let image_height = elev_data_height / compression_factor;
-
-    let file = File::open("assets/noaa_globe/h10g").unwrap();
+    let file = File::open("assets/elevation.bin").unwrap();
     let mut file = BufReader::new(file);
 
-    let mut height_data = Vec::with_capacity(image_width);
-    for _ in 0..image_height {
-        height_data.push(vec![0.0; image_width]);
+    let mut result = Vec::new();
+    for _ in 0..result_height {
+        result.push(vec![0; result_width]);
     }
 
     let mut count = 0;
@@ -39,24 +41,25 @@ fn get_elevation_data() -> Vec<Vec<f32>> {
         let (x, y) = (count % elev_data_width, count / elev_data_width);
 
         if x % compression_factor == 0 && y % compression_factor == 0 {
-            height_data[y / compression_factor][x / compression_factor] = elevation as f32;
+            result[y / compression_factor][x / compression_factor] = elevation;
         }
 
         count += 1;
     }
+
     println!("Done getting elevation data.");
 
-    height_data
+    result
 }
 
 
 gfx_vertex_struct!( Vertex {
     a_pos: [f32; 4] = "a_pos",
-    a_tex_coord: [i8; 2] = "a_tex_coord",
+    a_tex_coord: [f32; 2] = "a_tex_coord",
 });
 
 impl Vertex {
-    fn new(pos: [f32; 3], tex_coord: [i8; 2]) -> Vertex {
+    fn new(pos: [f32; 3], tex_coord: [f32; 2]) -> Vertex {
         Vertex {
             a_pos: [pos[0], pos[1], pos[2], 1.0],
             a_tex_coord: tex_coord,
@@ -109,15 +112,10 @@ fn main() {
         gfx::texture::WrapMode::Clamp
     );
 
-    let texels = [
-        [0x00, 0xff, 0x00, 0x00],
-        [0x00, 0xff, 0x00, 0x00],
-        [0x00, 0x00, 0xff, 0x00],
-        [0x00, 0x00, 0xff, 0x00],
-    ];
+    let texels = get_texels();
 
     let (_, texture_view) = factory.create_texture_immutable::<gfx::format::Rgba8>(
-        gfx::texture::Kind::D2(2, 2, gfx::texture::AaMode::Single),
+        gfx::texture::Kind::D2(1080, 540, gfx::texture::AaMode::Single),
         &[&texels]
     ).unwrap();
 
@@ -149,44 +147,52 @@ fn main() {
     }
 }
 
-fn get_vertex(x: f32, y: f32, z: f32) -> Vertex {
-    let tex_coord = if z > 0.0 { [0, 0] } else { [1, 1] };
+fn get_texels() -> Vec<[u8; 4]> {
+    let world_image = image::open("assets/world.jpg").unwrap();
+    println!("{:?}", world_image.dimensions());
 
-    Vertex::new([x / 100.0, y / 100.0, 0.0], tex_coord)
+    let mut result = Vec::new();
+
+    for (_, _, rgba) in world_image.pixels() {
+        result.push(rgba.data);
+    }
+
+    result
+}
+
+fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {
+    let tex_coord = [x as f32 / 1080.0, y as f32 / 540.0];
+    let z = if elevation == -500 || elevation <= 0 {
+        0.0
+    } else {
+        (elevation as f32).log2() / 200.0
+    };
+
+    Vertex::new([x as f32 / 100.0, y as f32 / -100.0, z], tex_coord)
 }
 
 fn get_vertex_data() -> (Vec<Vertex>, Vec<u32>) {
     let height_data = get_elevation_data();
-    // println!("{:?}", height_data);
-    // let height_data = vec![
-    //     vec![0.1, 0.5, 0.1],
-    //     vec![0.2, -0.2, 0.0],
-    // ];
 
     let height = height_data.len();
     let width = height_data[0].len();
-
-    println!("{} {}", height, width);
 
     let mut vertex_data = Vec::new();
     let mut index_data = Vec::new();
 
     for y in 0..height - 1 {
         for x in 0..width - 1 {
-            let top_left = height_data[y][x] / 1000.0;
-            let top_right = height_data[y][x + 1] / 1000.0;
-            let bot_left = height_data[y + 1][x] / 1000.0;
-            let bot_right = height_data[y + 1][x + 1] / 1000.0;
+            let top_left  = height_data[y + 0][x + 0];
+            let top_right = height_data[y + 0][x + 1];
+            let bot_left  = height_data[y + 1][x + 0];
+            let bot_right = height_data[y + 1][x + 1];
 
             let next_index = vertex_data.len() as u32;
 
-            let x = x as f32;
-            let y = y as f32;
-
-            vertex_data.push(get_vertex(x, -y, top_left));
-            vertex_data.push(get_vertex(x + 1.0, -y, top_right));
-            vertex_data.push(get_vertex(x, -y - 1.0, bot_left));
-            vertex_data.push(get_vertex(x + 1.0, -y - 1.0, bot_right));
+            vertex_data.push(get_vertex(x + 0, y + 0, top_left));
+            vertex_data.push(get_vertex(x + 1, y + 0, top_right));
+            vertex_data.push(get_vertex(x + 0, y + 1, bot_left));
+            vertex_data.push(get_vertex(x + 1, y + 1, bot_right));
 
             index_data.extend([next_index + 0, next_index + 1, next_index + 2].iter().cloned());
             index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
