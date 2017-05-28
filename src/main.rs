@@ -19,15 +19,15 @@ use sdl2_window::Sdl2Window;
 
 fn get_elevation_data() -> Vec<Vec<i16>> {
     println!("Getting elevation data...");
-    let elev_data_width = 8640;
-    let elev_data_height = 4320;
+    let elev_data_width = 2048;
+    let elev_data_height = 2048;
 
-    let compression_factor = 8;
+    let compression_factor = 4;
 
     let result_width = elev_data_width / compression_factor;
     let result_height = elev_data_height / compression_factor;
 
-    let file = File::open("assets/elevation.bin").unwrap();
+    let file = File::open("assets/east_hemisphere_elevation.bin").unwrap();
     let mut file = BufReader::new(file);
 
     let mut result = Vec::new();
@@ -115,7 +115,7 @@ fn main() {
     let texels = get_texels();
 
     let (_, texture_view) = factory.create_texture_immutable::<gfx::format::Rgba8>(
-        gfx::texture::Kind::D2(1080, 540, gfx::texture::AaMode::Single),
+        gfx::texture::Kind::D2(2048 / 4, 2048 / 4, gfx::texture::AaMode::Single),
         &[&texels]
     ).unwrap();
 
@@ -148,7 +148,7 @@ fn main() {
 }
 
 fn get_texels() -> Vec<[u8; 4]> {
-    let world_image = image::open("assets/world.jpg").unwrap();
+    let world_image = image::open("assets/east_hemisphere-test.jpg").unwrap();
     println!("{:?}", world_image.dimensions());
 
     let mut result = Vec::new();
@@ -161,8 +161,9 @@ fn get_texels() -> Vec<[u8; 4]> {
 }
 
 fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {
-    let tex_coord = [x as f32 / 1080.0, y as f32 / 540.0];
-    let z = if elevation == -500 || elevation <= 0 {
+    let tex_coord = [x as f32 / 512.0, y as f32 / 512.0];
+    let elevation = elevation - 500;
+    let z = if elevation <= 0 {
         0.0
     } else {
         (elevation as f32).log2() / 200.0
@@ -198,8 +199,6 @@ fn get_vertex_data() -> (Vec<Vertex>, Vec<u32>) {
             index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
         }
     }
-
-    println!("{:?}", vertex_data.len());
 
     (vertex_data, index_data)
 }
