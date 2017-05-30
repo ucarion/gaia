@@ -5,6 +5,7 @@ extern crate gfx;
 extern crate image;
 extern crate piston_window;
 extern crate sdl2_window;
+extern crate time;
 extern crate vecmath;
 
 use std::io::BufReader;
@@ -70,6 +71,7 @@ impl Vertex {
 gfx_pipeline!( pipe {
     vbuf: gfx::VertexBuffer<Vertex> = (),
     u_model_view_proj: gfx::Global<[[f32; 4]; 4]> = "u_model_view_proj",
+    u_offset_x: gfx::Global<f32> = "u_offset_x",
     t_color: gfx::TextureSampler<[f32; 4]> = "t_color",
     out_color: gfx::RenderTarget<::gfx::format::Srgba8> = "o_Color",
     out_depth: gfx::DepthTarget<::gfx::format::DepthStencil> =
@@ -94,7 +96,11 @@ fn main() {
         pipe::new(),
     ).unwrap();
 
-    let (vertex_data, index_data) = get_vertex_data();
+
+    let elevation_data = get_elevation_data();
+
+    let vertex_tree = VertexTree::new(elevation_data);
+    let (vertex_data, index_data) = vertex_tree.get_vertex_data();
     let index_data: &[u32] = &index_data; // TODO do I really have to do this?
     let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&vertex_data, index_data);
 
@@ -122,6 +128,7 @@ fn main() {
     let mut data = pipe::Data {
         vbuf: vbuf,
         u_model_view_proj: [[0.0; 4]; 4],
+        u_offset_x: 0.0,
         t_color: (texture_view, factory.create_sampler(sampler_info)),
         out_color: window.output_color.clone(),
         out_depth: window.output_stencil.clone(),
@@ -142,6 +149,10 @@ fn main() {
                 projection,
             );
 
+            data.u_offset_x = 0.0;
+            window.encoder.draw(&slice, &pso, &data);
+
+            data.u_offset_x = 5.12;
             window.encoder.draw(&slice, &pso, &data);
         });
     }
@@ -172,33 +183,41 @@ fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {
     Vertex::new([x as f32 / 100.0, y as f32 / -100.0, z], tex_coord)
 }
 
-fn get_vertex_data() -> (Vec<Vertex>, Vec<u32>) {
-    let height_data = get_elevation_data();
+struct VertexTree {
+    elevation_data: Vec<Vec<i16>>,
+}
 
-    let height = height_data.len();
-    let width = height_data[0].len();
-
-    let mut vertex_data = Vec::new();
-    let mut index_data = Vec::new();
-
-    for y in 0..height - 1 {
-        for x in 0..width - 1 {
-            let top_left  = height_data[y + 0][x + 0];
-            let top_right = height_data[y + 0][x + 1];
-            let bot_left  = height_data[y + 1][x + 0];
-            let bot_right = height_data[y + 1][x + 1];
-
-            let next_index = vertex_data.len() as u32;
-
-            vertex_data.push(get_vertex(x + 0, y + 0, top_left));
-            vertex_data.push(get_vertex(x + 1, y + 0, top_right));
-            vertex_data.push(get_vertex(x + 0, y + 1, bot_left));
-            vertex_data.push(get_vertex(x + 1, y + 1, bot_right));
-
-            index_data.extend([next_index + 0, next_index + 1, next_index + 2].iter().cloned());
-            index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
-        }
+impl VertexTree {
+    fn new(elevation_data: Vec<Vec<i16>>) -> VertexTree {
+        VertexTree { elevation_data: elevation_data }
     }
 
-    (vertex_data, index_data)
+    fn get_vertex_data(&self) -> (Vec<Vertex>, Vec<u32>) {
+        let height = self.elevation_data.len();
+        let width = self.elevation_data[0].len();
+
+        let mut vertex_data = Vec::new();
+        let mut index_data = Vec::new();
+
+        for y in 0..height - 1 {
+            for x in 0..width - 1 {
+                let top_left  = self.elevation_data[y + 0][x + 0];
+                let top_right = self.elevation_data[y + 0][x + 1];
+                let bot_left  = self.elevation_data[y + 1][x + 0];
+                let bot_right = self.elevation_data[y + 1][x + 1];
+
+                let next_index = vertex_data.len() as u32;
+
+                vertex_data.push(get_vertex(x + 0, y + 0, top_left));
+                vertex_data.push(get_vertex(x + 1, y + 0, top_right));
+                vertex_data.push(get_vertex(x + 0, y + 1, bot_left));
+                vertex_data.push(get_vertex(x + 1, y + 1, bot_right));
+
+                index_data.extend([next_index + 0, next_index + 1, next_index + 2].iter().cloned());
+                index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
+            }
+        }
+
+        (vertex_data, index_data)
+    }
 }
