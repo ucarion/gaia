@@ -1,22 +1,26 @@
 extern crate byteorder;
-extern crate camera_controllers;
+extern crate cam;
 #[macro_use]
 extern crate gfx;
 extern crate image;
+extern crate piston;
 extern crate piston_window;
-extern crate sdl2_window;
 extern crate time;
 extern crate vecmath;
+
+mod camera_controller;
 
 use std::io::BufReader;
 use std::fs::File;
 
+use camera_controller::CameraController;
+
 use byteorder::{LittleEndian, ReadBytesExt};
-use camera_controllers::{FirstPerson, FirstPersonSettings, CameraPerspective};
+use cam::CameraPerspective;
 use gfx::traits::*;
 use image::GenericImage;
+use piston::window::WindowSettings;
 use piston_window::*;
-use sdl2_window::Sdl2Window;
 
 fn get_elevation_data() -> Vec<Vec<i16>> {
     println!("Getting elevation data...");
@@ -78,15 +82,24 @@ gfx_pipeline!( pipe {
         gfx::preset::depth::LESS_EQUAL_WRITE,
 });
 
+fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
+    let draw_size = window.window.draw_size();
+
+    CameraPerspective {
+        fov: 60.0,
+        near_clip: 0.1,
+        far_clip: 1000.0,
+        aspect_ratio: (draw_size.width as f32) / (draw_size.height as f32),
+    }.projection()
+}
+
 fn main() {
-    let mut window: PistonWindow<Sdl2Window> = WindowSettings::new("Gaia", [960, 520])
+    let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
         .samples(4)
         .opengl(OpenGL::V3_2)
         .build()
         .unwrap();
-
-    window.set_capture_cursor(true);
 
     let ref mut factory = window.factory.clone();
 
@@ -105,13 +118,7 @@ fn main() {
     let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&vertex_data, index_data);
 
     let model = vecmath::mat4_id();
-    let mut camera_controller = FirstPerson::new([0.0, 0.0, 5.0], FirstPersonSettings::keyboard_wasd());
-    let projection = CameraPerspective {
-        fov: 90.0,
-        near_clip: 0.1,
-        far_clip: 1000.0,
-        aspect_ratio: 960.0 / 520.0,
-    }.projection();
+    let mut camera_controller = CameraController::new();
 
     let sampler_info = gfx::texture::SamplerInfo::new(
         gfx::texture::FilterMethod::Bilinear,
@@ -138,22 +145,22 @@ fn main() {
         camera_controller.event(&e);
 
         window.draw_3d(&e, |window| {
-            let args = e.render_args().unwrap();
-
             window.encoder.clear(&window.output_color, [0.3, 0.3, 0.3, 1.0]);
             window.encoder.clear_depth(&window.output_stencil, 1.0);
 
-            data.u_model_view_proj = camera_controllers::model_view_projection(
+            data.u_model_view_proj = cam::model_view_projection(
                 model,
-                camera_controller.camera(args.ext_dt).orthogonal(),
-                projection,
+                camera_controller.view_matrix(),
+                get_projection(&window),
             );
 
             data.u_offset_x = 0.0;
             window.encoder.draw(&slice, &pso, &data);
+        });
 
-            data.u_offset_x = 5.12;
-            window.encoder.draw(&slice, &pso, &data);
+        e.resize(|_, _| {
+            data.out_color = window.output_color.clone();
+            data.out_depth = window.output_stencil.clone();
         });
     }
 }
@@ -177,10 +184,10 @@ fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {
     let z = if elevation <= 0 {
         0.0
     } else {
-        (elevation as f32).log2() / 200.0
+        elevation as f32 / 1000.0
     };
 
-    Vertex::new([x as f32 / 100.0, y as f32 / -100.0, z], tex_coord)
+    Vertex::new([x as f32, -(y as f32), z], tex_coord)
 }
 
 struct VertexTree {
