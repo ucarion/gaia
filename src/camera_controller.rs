@@ -88,7 +88,7 @@ impl CameraController {
                 let drag_distance_per_pixel = linear_interpolate(
                     DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT,
                     DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT,
-                    t
+                    t,
                 );
 
                 self.look_at.0 -= x as f32 * drag_distance_per_pixel;
