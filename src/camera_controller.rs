@@ -6,9 +6,9 @@ use piston::input::mouse::MouseButton;
 
 #[derive(Debug)]
 pub struct CameraController {
-    look_at: (f32, f32),
+    pub look_at: [f32; 2],
     height: f32,
-    velocity: (f32, f32, f32),
+    velocity: [f32; 3],
     dragging: bool,
 }
 
@@ -17,26 +17,26 @@ pub struct CameraController {
 const HEIGHT_VELOCITY_AFTER_SECOND: f32 = 0.01;
 
 /// Determines how quickly height changes the instant after a scroll event.
-const INITIAL_HEIGHT_VELOCITY: f32 = 50.0;
+const INITIAL_HEIGHT_VELOCITY: f32 = 150.0;
 
 /// When the user drags the mouse for one pixel with the camera at minimum height, this is the
 /// resulting change in `look_at`.
 const DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT: f32 = 0.2;
 
 /// Same as `DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT`, but when the camera is at maximum height.
-const DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT: f32 = 0.8;
+const DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT: f32 = 10.0;
 
 /// The lowest the camera can go.
-const MIN_HEIGHT: f32 = 20.0;
+const MIN_HEIGHT: f32 = 80.0;
 
 /// The highest the camera can go.
-const MAX_HEIGHT: f32 = 200.0;
+const MAX_HEIGHT: f32 = 2000.0;
 
 /// The height above which the viewing angle will always be `MAX_ANGLE`.
-const MAX_ANGLE_HEIGHT: f32 = 50.0;
+const MAX_ANGLE_HEIGHT: f32 = 700.0;
 
 /// The viewing angle when at `MIN_HEIGHT`.
-const MIN_ANGLE: f32 = PI * (1.0 / 4.0);
+const MIN_ANGLE: f32 = PI * (1.0 / 6.0);
 
 /// The viewing angle when at `MAX_ANGLE_HEIGHT` or above.
 const MAX_ANGLE: f32 = PI * (1.0 / 2.0);
@@ -52,9 +52,9 @@ fn linear_interpolate(min: f32, max: f32, t: f32) -> f32 {
 impl CameraController {
     pub fn new() -> CameraController {
         CameraController {
-            look_at: (100.0, -100.0),
-            height: 50.0,
-            velocity: (0.0, 0.0, 0.0),
+            look_at: [1834.0104, -1307.2428],
+            height: MIN_HEIGHT,
+            velocity: [0.0, 0.0, 0.0],
             dragging: false,
         }
     }
@@ -64,14 +64,14 @@ impl CameraController {
             let dt = args.dt as f32;
             let velocity_loss_factor = HEIGHT_VELOCITY_AFTER_SECOND.powf(dt);
 
-            let new_height = self.height + self.velocity.2 * dt;
+            let new_height = self.height + self.velocity[2] * dt;
             self.height = clamp(MIN_HEIGHT, MAX_HEIGHT, new_height);
-            self.velocity.2 *= velocity_loss_factor;
+            self.velocity[2] *= velocity_loss_factor;
         });
 
         e.mouse_scroll(|_scroll_x, scroll_y| {
             let scroll = -(scroll_y as f32);
-            self.velocity.2 += scroll * INITIAL_HEIGHT_VELOCITY;
+            self.velocity[2] += scroll * INITIAL_HEIGHT_VELOCITY;
         });
 
         e.press(|button| {
@@ -91,8 +91,8 @@ impl CameraController {
                     t,
                 );
 
-                self.look_at.0 -= x as f32 * drag_distance_per_pixel;
-                self.look_at.1 += y as f32 * drag_distance_per_pixel;
+                self.look_at[0] -= x as f32 * drag_distance_per_pixel;
+                self.look_at[1] += y as f32 * drag_distance_per_pixel;
             }
         });
     }
@@ -113,15 +113,18 @@ impl CameraController {
     }
 
     pub fn view_matrix(&self) -> [[f32; 4]; 4] {
+        let camera_look_at = [self.look_at[0], self.look_at[1], 0.0];
+
+        let mut camera = Camera::new(self.camera_position());
+        camera.look_at(camera_look_at);
+        camera.orthogonal()
+    }
+
+    pub fn camera_position(&self) -> [f32; 3] {
         let angle = self.viewing_angle();
         let offset_y = self.height * (1.0 / angle.tan());
 
-        let camera_position = [self.look_at.0, self.look_at.1 - offset_y, self.height];
-        let camera_look_at = [self.look_at.0, self.look_at.1, 0.0];
-
-        let mut camera = Camera::new(camera_position);
-        camera.look_at(camera_look_at);
-        camera.orthogonal()
+        [self.look_at[0], self.look_at[1] - offset_y, self.height]
     }
 
     fn viewing_angle(&self) -> f32 {

@@ -2,9 +2,9 @@
 
 echo "Generating world image from NASA Blue Marble data ..."
 convert assets/nasa_blue_marble/world.topo.bathy.200412.3x5400x2700.jpg \
-    -gravity west -crop 50%x100%+0+0 -resize 2048 assets/west_hemisphere.jpg
+    -gravity west -crop 50%x100%+0+0 -resize 4097 assets/west_hemisphere.jpg
 convert assets/nasa_blue_marble/world.topo.bathy.200412.3x5400x2700.jpg \
-    -gravity east -crop 50%x100%+0+0 -resize 2048 assets/east_hemisphere.jpg
+    -gravity east -crop 50%x100%+0+0 -resize 4097 assets/east_hemisphere.jpg
 
 echo "Generating elevation data from NOAA GLOBE data ..."
 convert -monitor -depth 16 \
@@ -13,6 +13,7 @@ convert -monitor -depth 16 \
     \( -size 10800x6000 gray:assets/noaa_globe/i10g gray:assets/noaa_globe/j10g -evaluate addmodulus 500 -resize 1024 +append \) \
     \( -size 10800x4800 gray:assets/noaa_globe/m10g gray:assets/noaa_globe/n10g -evaluate addmodulus 500 -resize 1024 +append \) \
     -append \
+    -resize 4097 \
     gray:assets/west_hemisphere_elevation.bin
 
 convert -monitor -depth 16 \
@@ -21,4 +22,5 @@ convert -monitor -depth 16 \
     \( -size 10800x6000 gray:assets/noaa_globe/k10g gray:assets/noaa_globe/l10g -evaluate addmodulus 500 -resize 1024 +append \) \
     \( -size 10800x4800 gray:assets/noaa_globe/o10g gray:assets/noaa_globe/p10g -evaluate addmodulus 500 -resize 1024 +append \) \
     -append \
+    -resize 4097 \
     gray:assets/east_hemisphere_elevation.bin

@@ -9,6 +9,7 @@ extern crate time;
 extern crate vecmath;
 
 mod camera_controller;
+mod index_getter;
 
 use std::io::BufReader;
 use std::fs::File;
@@ -24,10 +25,10 @@ use piston_window::*;
 
 fn get_elevation_data() -> Vec<Vec<i16>> {
     println!("Getting elevation data...");
-    let elev_data_width = 2048;
-    let elev_data_height = 2048;
+    let elev_data_width = 4097;
+    let elev_data_height = 4097;
 
-    let compression_factor = 4;
+    let compression_factor = 1;
 
     let result_width = elev_data_width / compression_factor;
     let result_height = elev_data_height / compression_factor;
@@ -86,9 +87,9 @@ fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
     let draw_size = window.window.draw_size();
 
     CameraPerspective {
-        fov: 60.0,
+        fov: 45.0,
         near_clip: 0.1,
-        far_clip: 1000.0,
+        far_clip: 10000.0,
         aspect_ratio: (draw_size.width as f32) / (draw_size.height as f32),
     }.projection()
 }
@@ -109,28 +110,37 @@ fn main() {
         pipe::new(),
     ).unwrap();
 
+    let model = vecmath::mat4_id();
+    let mut camera_controller = CameraController::new();
 
     let elevation_data = get_elevation_data();
 
+    println!("Generating vertices...");
     let vertex_tree = VertexTree::new(elevation_data);
-    let (vertex_data, index_data) = vertex_tree.get_vertex_data();
+    let (vertex_data, _index_data) = vertex_tree.get_vertex_data();
+    println!("Done generating vertices.");
+
+    println!("Generating indexes...");
+    let index_data = index_getter::get_indices(camera_controller.camera_position(), [0.0, 0.0]);
     let index_data: &[u32] = &index_data; // TODO do I really have to do this?
     let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&vertex_data, index_data);
+    println!("Done generating indices.");
 
-    let model = vecmath::mat4_id();
-    let mut camera_controller = CameraController::new();
+    println!("{} {:?}", vertex_data.len(), index_data);
 
     let sampler_info = gfx::texture::SamplerInfo::new(
         gfx::texture::FilterMethod::Bilinear,
         gfx::texture::WrapMode::Clamp
     );
 
+    println!("Generating texture");
     let texels = get_texels();
 
     let (_, texture_view) = factory.create_texture_immutable::<gfx::format::Rgba8>(
-        gfx::texture::Kind::D2(2048 / 4, 2048 / 4, gfx::texture::AaMode::Single),
+        gfx::texture::Kind::D2(4097, 4097, gfx::texture::AaMode::Single),
         &[&texels]
     ).unwrap();
+    println!("Done generating texture");
 
     let mut data = pipe::Data {
         vbuf: vbuf,
@@ -154,6 +164,18 @@ fn main() {
                 get_projection(&window),
             );
 
+            let indices = index_getter::get_indices(camera_controller.camera_position(), [0.0, 0.0]);
+            let index_buffer = factory.create_index_buffer(indices.as_slice());
+            let slice = gfx::Slice {
+                start: 0,
+                end: indices.len() as u32,
+                base_vertex: 0,
+                instances: None,
+                buffer: index_buffer,
+            };
+
+            println!("{}", indices.len());
+
             data.u_offset_x = 0.0;
             window.encoder.draw(&slice, &pso, &data);
         });
@@ -166,7 +188,7 @@ fn main() {
 }
 
 fn get_texels() -> Vec<[u8; 4]> {
-    let world_image = image::open("assets/east_hemisphere-test.jpg").unwrap();
+    let world_image = image::open("assets/east_hemisphere.jpg").unwrap();
     println!("{:?}", world_image.dimensions());
 
     let mut result = Vec::new();
@@ -179,12 +201,12 @@ fn get_texels() -> Vec<[u8; 4]> {
 }
 
 fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {
-    let tex_coord = [x as f32 / 512.0, y as f32 / 512.0];
+    let tex_coord = [x as f32 / 4097.0, y as f32 / 4097.0];
     let elevation = elevation - 500;
     let z = if elevation <= 0 {
         0.0
     } else {
-        elevation as f32 / 1000.0
+        elevation as f32 / 200.0
     };
 
     Vertex::new([x as f32, -(y as f32), z], tex_coord)
@@ -206,25 +228,27 @@ impl VertexTree {
         let mut vertex_data = Vec::new();
         let mut index_data = Vec::new();
 
-        for y in 0..height - 1 {
-            for x in 0..width - 1 {
-                let top_left  = self.elevation_data[y + 0][x + 0];
-                let top_right = self.elevation_data[y + 0][x + 1];
-                let bot_left  = self.elevation_data[y + 1][x + 0];
-                let bot_right = self.elevation_data[y + 1][x + 1];
+        for y in 0..height {
+            for x in 0..width {
+                vertex_data.push(get_vertex(x, y, self.elevation_data[y][x]));
+                // let top_left  = self.elevation_data[y + 0][x + 0];
+                // let top_right = self.elevation_data[y + 0][x + 1];
+                // let bot_left  = self.elevation_data[y + 1][x + 0];
+                // let bot_right = self.elevation_data[y + 1][x + 1];
 
-                let next_index = vertex_data.len() as u32;
+                // let next_index = vertex_data.len() as u32;
 
-                vertex_data.push(get_vertex(x + 0, y + 0, top_left));
-                vertex_data.push(get_vertex(x + 1, y + 0, top_right));
-                vertex_data.push(get_vertex(x + 0, y + 1, bot_left));
-                vertex_data.push(get_vertex(x + 1, y + 1, bot_right));
+                // vertex_data.push(get_vertex(x + 0, y + 0, top_left));
+                // vertex_data.push(get_vertex(x + 1, y + 0, top_right));
+                // vertex_data.push(get_vertex(x + 0, y + 1, bot_left));
+                // vertex_data.push(get_vertex(x + 1, y + 1, bot_right));
 
-                index_data.extend([next_index + 0, next_index + 1, next_index + 2].iter().cloned());
-                index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
+                // index_data.extend([next_index + 0, next_index + 1, next_index + 2].iter().cloned());
+                // index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
             }
         }
 
         (vertex_data, index_data)
     }
 }
+
