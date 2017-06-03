@@ -137,7 +137,7 @@ fn main() {
     let texels = get_texels();
 
     let (_, texture_view) = factory.create_texture_immutable::<gfx::format::Rgba8>(
-        gfx::texture::Kind::D2(4097, 4097, gfx::texture::AaMode::Single),
+        gfx::texture::Kind::D2(10800, 10800, gfx::texture::AaMode::Single),
         &[&texels]
     ).unwrap();
     println!("Done generating texture");
@@ -202,14 +202,17 @@ fn get_texels() -> Vec<[u8; 4]> {
 
 fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {
     let tex_coord = [x as f32 / 4097.0, y as f32 / 4097.0];
-    let elevation = elevation - 500;
-    let z = if elevation <= 0 {
-        0.0
-    } else {
-        elevation as f32 / 200.0
-    };
+    let z = get_z(elevation as f32 - 500.0);
 
     Vertex::new([x as f32, -(y as f32), z], tex_coord)
+}
+
+fn get_z(elevation: f32) -> f32 {
+    if elevation <= 0.0 {
+        0.0
+    } else {
+        elevation / 50.0
+    }
 }
 
 struct VertexTree {

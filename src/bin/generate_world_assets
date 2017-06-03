@@ -1,10 +1,10 @@
 #!/bin/bash
 
 echo "Generating world image from NASA Blue Marble data ..."
-convert assets/nasa_blue_marble/world.topo.bathy.200412.3x5400x2700.jpg \
-    -gravity west -crop 50%x100%+0+0 -resize 4097 assets/west_hemisphere.jpg
-convert assets/nasa_blue_marble/world.topo.bathy.200412.3x5400x2700.jpg \
-    -gravity east -crop 50%x100%+0+0 -resize 4097 assets/east_hemisphere.jpg
+convert assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
+    -gravity west -crop 50%x100%+0+0 -resize 10800 assets/west_hemisphere.jpg
+convert assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
+    -gravity east -crop 50%x100%+0+0 -resize 10800 assets/east_hemisphere.jpg
 
 echo "Generating elevation data from NOAA GLOBE data ..."
 convert -monitor -depth 16 \

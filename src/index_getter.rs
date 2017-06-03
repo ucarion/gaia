@@ -1,4 +1,4 @@
-const LEVEL_OF_DETAIL_THRESHOLD: f32 = 2.0;
+const LEVEL_OF_DETAIL_THRESHOLD: f32 = 0.3;
 const VERTEX_GRID_SIDE_LENGTH: u32 = 4097;
 
 pub fn get_indices(camera_pos: [f32; 3], top_left: [f32; 2]) -> Vec<u32> {

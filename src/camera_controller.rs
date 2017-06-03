@@ -27,16 +27,16 @@ const DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT: f32 = 0.2;
 const DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT: f32 = 10.0;
 
 /// The lowest the camera can go.
-const MIN_HEIGHT: f32 = 80.0;
+const MIN_HEIGHT: f32 = 250.0;
 
 /// The highest the camera can go.
-const MAX_HEIGHT: f32 = 2000.0;
+const MAX_HEIGHT: f32 = 3000.0;
 
 /// The height above which the viewing angle will always be `MAX_ANGLE`.
-const MAX_ANGLE_HEIGHT: f32 = 700.0;
+const MAX_ANGLE_HEIGHT: f32 = 500.0;
 
 /// The viewing angle when at `MIN_HEIGHT`.
-const MIN_ANGLE: f32 = PI * (1.0 / 6.0);
+const MIN_ANGLE: f32 = PI * (1.0 / 4.0);
 
 /// The viewing angle when at `MAX_ANGLE_HEIGHT` or above.
 const MAX_ANGLE: f32 = PI * (1.0 / 2.0);
