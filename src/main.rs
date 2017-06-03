@@ -116,14 +116,13 @@ fn main() {
     let elevation_data = get_elevation_data();
 
     println!("Generating vertices...");
-    let vertex_tree = VertexTree::new(elevation_data);
-    let (vertex_data, _index_data) = vertex_tree.get_vertex_data();
+    let vertex_data = get_vertex_data(elevation_data);
     println!("Done generating vertices.");
 
     println!("Generating indexes...");
     let index_data = index_getter::get_indices(camera_controller.camera_position(), [0.0, 0.0]);
     let index_data: &[u32] = &index_data; // TODO do I really have to do this?
-    let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&vertex_data, index_data);
+    let vbuf = factory.create_vertex_buffer(&vertex_data);
     println!("Done generating indices.");
 
     println!("{} {:?}", vertex_data.len(), index_data);
@@ -189,13 +188,15 @@ fn main() {
 
 fn get_texels() -> Vec<[u8; 4]> {
     let world_image = image::open("assets/east_hemisphere.jpg").unwrap();
-    println!("{:?}", world_image.dimensions());
+    println!("Image loaded: {:?}", world_image.dimensions());
 
     let mut result = Vec::new();
 
     for (_, _, rgba) in world_image.pixels() {
         result.push(rgba.data);
     }
+
+    println!("Done looping through");
 
     result
 }
@@ -215,43 +216,17 @@ fn get_z(elevation: f32) -> f32 {
     }
 }
 
-struct VertexTree {
-    elevation_data: Vec<Vec<i16>>,
-}
+fn get_vertex_data(elevation_data: Vec<Vec<i16>>) -> Vec<Vertex> {
+    let height = elevation_data.len();
+    let width = elevation_data[0].len();
 
-impl VertexTree {
-    fn new(elevation_data: Vec<Vec<i16>>) -> VertexTree {
-        VertexTree { elevation_data: elevation_data }
-    }
+    let mut vertex_data = Vec::new();
 
-    fn get_vertex_data(&self) -> (Vec<Vertex>, Vec<u32>) {
-        let height = self.elevation_data.len();
-        let width = self.elevation_data[0].len();
-
-        let mut vertex_data = Vec::new();
-        let mut index_data = Vec::new();
-
-        for y in 0..height {
-            for x in 0..width {
-                vertex_data.push(get_vertex(x, y, self.elevation_data[y][x]));
-                // let top_left  = self.elevation_data[y + 0][x + 0];
-                // let top_right = self.elevation_data[y + 0][x + 1];
-                // let bot_left  = self.elevation_data[y + 1][x + 0];
-                // let bot_right = self.elevation_data[y + 1][x + 1];
-
-                // let next_index = vertex_data.len() as u32;
-
-                // vertex_data.push(get_vertex(x + 0, y + 0, top_left));
-                // vertex_data.push(get_vertex(x + 1, y + 0, top_right));
-                // vertex_data.push(get_vertex(x + 0, y + 1, bot_left));
-                // vertex_data.push(get_vertex(x + 1, y + 1, bot_right));
-
-                // index_data.extend([next_index + 0, next_index + 1, next_index + 2].iter().cloned());
-                // index_data.extend([next_index + 1, next_index + 2, next_index + 3].iter().cloned());
-            }
+    for y in 0..height {
+        for x in 0..width {
+            vertex_data.push(get_vertex(x, y, elevation_data[y][x]));
         }
-
-        (vertex_data, index_data)
     }
-}
 
+    vertex_data
+}

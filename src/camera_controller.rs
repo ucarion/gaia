@@ -6,7 +6,7 @@ use piston::input::mouse::MouseButton;
 
 #[derive(Debug)]
 pub struct CameraController {
-    pub look_at: [f32; 2],
+    look_at: [f32; 2],
     height: f32,
     velocity: [f32; 3],
     dragging: bool,
@@ -17,7 +17,7 @@ pub struct CameraController {
 const HEIGHT_VELOCITY_AFTER_SECOND: f32 = 0.01;
 
 /// Determines how quickly height changes the instant after a scroll event.
-const INITIAL_HEIGHT_VELOCITY: f32 = 150.0;
+const INITIAL_HEIGHT_VELOCITY: f32 = 250.0;
 
 /// When the user drags the mouse for one pixel with the camera at minimum height, this is the
 /// resulting change in `look_at`.
@@ -52,8 +52,8 @@ fn linear_interpolate(min: f32, max: f32, t: f32) -> f32 {
 impl CameraController {
     pub fn new() -> CameraController {
         CameraController {
-            look_at: [1834.0104, -1307.2428],
-            height: MIN_HEIGHT,
+            look_at: [0.0, 0.0],
+            height: MAX_HEIGHT,
             velocity: [0.0, 0.0, 0.0],
             dragging: false,
         }
