@@ -2,6 +2,7 @@ extern crate byteorder;
 extern crate cam;
 extern crate cgmath;
 extern crate collision;
+extern crate fps_counter;
 #[macro_use]
 extern crate gfx;
 extern crate image;
@@ -20,6 +21,7 @@ use camera_controller::CameraController;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use cam::CameraPerspective;
+use fps_counter::FPSCounter;
 use gfx::traits::*;
 use image::GenericImage;
 use piston::window::WindowSettings;
@@ -156,7 +158,7 @@ fn main() {
         out_depth: window.output_stencil.clone(),
     };
 
-    let mut count = 0;
+    let mut fps_counter = FPSCounter::new();
 
     while let Some(e) = window.next() {
         camera_controller.event(&e);
@@ -185,14 +187,11 @@ fn main() {
                 buffer: index_buffer,
             };
 
-            count += 1;
-            if count % 100 == 0 {
-                println!("{}", indices.len());
-            }
-
             data.u_model_view_proj = model_view_projection;
             data.u_offset_x = 0.0;
             window.encoder.draw(&slice, &pso, &data);
+
+            println!("{} - {}", fps_counter.tick(), camera_controller.camera_position()[2]);
         });
 
         e.resize(|_, _| {
@@ -200,21 +199,6 @@ fn main() {
             data.out_depth = window.output_stencil.clone();
         });
     }
-}
-
-fn get_texels() -> Vec<[u8; 4]> {
-    let world_image = image::open("assets/east_hemisphere.jpg").unwrap();
-    println!("Image loaded: {:?}", world_image.dimensions());
-
-    let mut result = Vec::new();
-
-    for (_, _, rgba) in world_image.pixels() {
-        result.push(rgba.data);
-    }
-
-    println!("Done looping through");
-
-    result
 }
 
 fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {

@@ -12,11 +12,15 @@ const VERTEX_GRID_SIDE_LENGTH: u32 = 4097;
 /// TODO: Make this dynamically calculated.
 const MAX_POSSIBLE_ELEVATION: f32 = 300.0;
 
+/// If the camera height is above this value, do not attempt to use frustum culling.
+const MAX_HEIGHT_FOR_CULLING: f32 = 1000.0;
+
 pub fn get_indices(mvp_matrix: [[f32; 4]; 4], camera_pos: [f32; 3], top_left: [f32; 2]) -> Vec<u32> {
     let frustum = Frustum::from_matrix4(mvp_matrix.into()).unwrap();
+    let try_culling = camera_pos[2] < MAX_HEIGHT_FOR_CULLING;
 
     let mut result = Vec::new();
-    add_indices(&mut result, frustum, true, camera_pos, top_left, 0, VERTEX_GRID_SIDE_LENGTH);
+    add_indices(&mut result, frustum, try_culling, camera_pos, top_left, 0, VERTEX_GRID_SIDE_LENGTH);
     result
 }
 
