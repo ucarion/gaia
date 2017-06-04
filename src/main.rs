@@ -97,7 +97,6 @@ fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
 fn main() {
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
-        .samples(4)
         .opengl(OpenGL::V3_2)
         .build()
         .unwrap();
@@ -117,29 +116,33 @@ fn main() {
 
     println!("Generating vertices...");
     let vertex_data = get_vertex_data(elevation_data);
+    let vbuf = factory.create_vertex_buffer(&vertex_data);
     println!("Done generating vertices.");
 
-    println!("Generating indexes...");
-    let index_data = index_getter::get_indices(camera_controller.camera_position(), [0.0, 0.0]);
-    let index_data: &[u32] = &index_data; // TODO do I really have to do this?
-    let vbuf = factory.create_vertex_buffer(&vertex_data);
-    println!("Done generating indices.");
-
-    println!("{} {:?}", vertex_data.len(), index_data);
-
     let sampler_info = gfx::texture::SamplerInfo::new(
-        gfx::texture::FilterMethod::Bilinear,
-        gfx::texture::WrapMode::Clamp
+        gfx::texture::FilterMethod::Mipmap,
+        gfx::texture::WrapMode::Tile,
     );
 
-    println!("Generating texture");
-    let texels = get_texels();
+    let image_data1 = include_bytes!("../assets/east_hemisphere_small.jpg");
+    let world_image1 = image::load_from_memory(image_data1).unwrap();
+    let image_buffer1 = world_image1.to_rgba().into_raw();
 
-    let (_, texture_view) = factory.create_texture_immutable::<gfx::format::Rgba8>(
-        gfx::texture::Kind::D2(10800, 10800, gfx::texture::AaMode::Single),
-        &[&texels]
+    let image_data2 = include_bytes!("../assets/east_hemisphere_medium.jpg");
+    let world_image2 = image::load_from_memory(image_data2).unwrap();
+    let image_buffer2 = world_image2.to_rgba().into_raw();
+
+    let image_data3 = include_bytes!("../assets/east_hemisphere_big.jpg");
+    let world_image3 = image::load_from_memory(image_data3).unwrap();
+    let (width3, height3) = world_image3.dimensions();
+    let image_buffer3 = world_image3.to_rgba().into_raw();
+
+    let texture_kind = gfx::texture::Kind::D2(width3 as u16, height3 as u16, gfx::texture::AaMode::Single);
+    let texture_data = [image_buffer3.as_slice(), image_buffer2.as_slice(), image_buffer1.as_slice()];
+    let (_texture, texture_view) = factory.create_texture_immutable_u8::<gfx::format::Rgba8>(
+        texture_kind,
+        &texture_data
     ).unwrap();
-    println!("Done generating texture");
 
     let mut data = pipe::Data {
         vbuf: vbuf,
