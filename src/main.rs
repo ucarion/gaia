@@ -1,5 +1,7 @@
 extern crate byteorder;
 extern crate cam;
+extern crate cgmath;
+extern crate collision;
 #[macro_use]
 extern crate gfx;
 extern crate image;
@@ -130,15 +132,16 @@ fn main() {
 
     let image_data2 = include_bytes!("../assets/east_hemisphere_medium.jpg");
     let world_image2 = image::load_from_memory(image_data2).unwrap();
+    let (width2, height2) = world_image2.dimensions();
     let image_buffer2 = world_image2.to_rgba().into_raw();
 
-    let image_data3 = include_bytes!("../assets/east_hemisphere_big.jpg");
-    let world_image3 = image::load_from_memory(image_data3).unwrap();
-    let (width3, height3) = world_image3.dimensions();
-    let image_buffer3 = world_image3.to_rgba().into_raw();
+    // let image_data3 = include_bytes!("../assets/east_hemisphere_big.jpg");
+    // let world_image3 = image::load_from_memory(image_data3).unwrap();
+    // let (width3, height3) = world_image3.dimensions();
+    // let image_buffer3 = world_image3.to_rgba().into_raw();
 
-    let texture_kind = gfx::texture::Kind::D2(width3 as u16, height3 as u16, gfx::texture::AaMode::Single);
-    let texture_data = [image_buffer3.as_slice(), image_buffer2.as_slice(), image_buffer1.as_slice()];
+    let texture_kind = gfx::texture::Kind::D2(width2 as u16, height2 as u16, gfx::texture::AaMode::Single);
+    let texture_data = [/*image_buffer3.as_slice(), */image_buffer2.as_slice(), image_buffer1.as_slice()];
     let (_texture, texture_view) = factory.create_texture_immutable_u8::<gfx::format::Rgba8>(
         texture_kind,
         &texture_data
@@ -153,6 +156,8 @@ fn main() {
         out_depth: window.output_stencil.clone(),
     };
 
+    let mut count = 0;
+
     while let Some(e) = window.next() {
         camera_controller.event(&e);
 
@@ -160,13 +165,17 @@ fn main() {
             window.encoder.clear(&window.output_color, [0.3, 0.3, 0.3, 1.0]);
             window.encoder.clear_depth(&window.output_stencil, 1.0);
 
-            data.u_model_view_proj = cam::model_view_projection(
+            let model_view_projection = cam::model_view_projection(
                 model,
                 camera_controller.view_matrix(),
                 get_projection(&window),
             );
 
-            let indices = index_getter::get_indices(camera_controller.camera_position(), [0.0, 0.0]);
+            let indices = index_getter::get_indices(
+                model_view_projection,
+                camera_controller.camera_position(),
+                [0.0, 0.0],
+            );
             let index_buffer = factory.create_index_buffer(indices.as_slice());
             let slice = gfx::Slice {
                 start: 0,
@@ -176,8 +185,12 @@ fn main() {
                 buffer: index_buffer,
             };
 
-            println!("{}", indices.len());
+            count += 1;
+            if count % 100 == 0 {
+                println!("{}", indices.len());
+            }
 
+            data.u_model_view_proj = model_view_projection;
             data.u_offset_x = 0.0;
             window.encoder.draw(&slice, &pso, &data);
         });

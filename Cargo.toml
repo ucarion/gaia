@@ -6,6 +6,8 @@ authors = ["Ulysse Carion <ulysse@ulysse.io>"]
 [dependencies]
 byteorder = "1"
 camera_controllers = "0.21"
+cgmath = "0.14"
+collision = "0.10"
 gfx = "0.16"
 image = "0.13"
 piston = "0.32"
