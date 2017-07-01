@@ -159,6 +159,9 @@ fn main() {
     };
 
     let mut fps_counter = FPSCounter::new();
+    let mut fps = 0;
+
+    let mut glyphs = Glyphs::new("FiraSans-Regular.ttf", factory.clone()).unwrap();
 
     while let Some(e) = window.next() {
         camera_controller.event(&e);
@@ -191,7 +194,18 @@ fn main() {
             data.u_offset_x = 0.0;
             window.encoder.draw(&slice, &pso, &data);
 
-            println!("{} - {}", fps_counter.tick(), camera_controller.camera_position()[2]);
+            fps = fps_counter.tick();
+        });
+
+        window.draw_2d(&e, |context, graphics| {
+            let transform = context.transform.trans(10.0, 10.0);
+            text::Text::new_color([0.0, 0.0, 0.0, 1.0], 10).draw(
+                &format!("FPS: {}", fps),
+                &mut glyphs,
+                &context.draw_state,
+                transform,
+                graphics,
+            );
         });
 
         e.resize(|_, _| {
