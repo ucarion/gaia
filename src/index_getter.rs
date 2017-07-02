@@ -1,9 +1,5 @@
 use collision::{Aabb3, Frustum, Relation};
 
-/// The greatest ratio of area to distance-from-camera that a square can have without being
-/// subdivided.
-const LEVEL_OF_DETAIL_THRESHOLD: f32 = 0.3;
-
 /// The width of the vertex grid. Used to calculate indices into the vertex grid.
 const VERTEX_GRID_SIDE_LENGTH: u32 = 4097;
 
@@ -12,20 +8,25 @@ const VERTEX_GRID_SIDE_LENGTH: u32 = 4097;
 /// TODO: Make this dynamically calculated.
 const MAX_POSSIBLE_ELEVATION: f32 = 300.0;
 
-/// If the camera height is above this value, do not attempt to use frustum culling.
-const MAX_HEIGHT_FOR_CULLING: f32 = 1000.0;
-
 pub fn get_indices(mvp_matrix: [[f32; 4]; 4], camera_pos: [f32; 3], top_left: [f32; 2]) -> Vec<u32> {
     let frustum = Frustum::from_matrix4(mvp_matrix.into()).unwrap();
-    let try_culling = camera_pos[2] < MAX_HEIGHT_FOR_CULLING;
+
+    let max_depth = match camera_pos[2] {
+        0.0 ... 300.0 => { 9 },
+        300.0 ... 500.0 => { 8 },
+        500.0 ... 650.0 => { 7 },
+        650.0 ... 1200.0 => { 6 },
+        1200.0 ... 2000.0 => { 5 },
+        _ => { 4 },
+    };
 
     let mut result = Vec::new();
-    add_indices(&mut result, frustum, try_culling, camera_pos, top_left, 0, VERTEX_GRID_SIDE_LENGTH);
+    add_indices(&mut result, frustum, true, max_depth, top_left, 0, VERTEX_GRID_SIDE_LENGTH, 0);
     result
 }
 
-fn add_indices(buf: &mut Vec<u32>, frustum: Frustum<f32>, try_culling: bool, camera_pos: [f32; 3],
-               top_left: [f32; 2], top_left_index: u32, side_length: u32) {
+fn add_indices(buf: &mut Vec<u32>, frustum: Frustum<f32>, try_culling: bool, max_depth: usize,
+               top_left: [f32; 2], top_left_index: u32, side_length: u32, current_depth: usize) {
     // There are three possible relations between the bounding box surrounding this square and the
     // view frustum:
     //
@@ -49,10 +50,7 @@ fn add_indices(buf: &mut Vec<u32>, frustum: Frustum<f32>, try_culling: bool, cam
         return;
     }
 
-    let area = side_length.pow(2) as f32;
-    let distance = euclidean_distance(camera_pos, center_point(top_left, side_length));
-
-    if area / distance < LEVEL_OF_DETAIL_THRESHOLD {
+    if current_depth == max_depth {
         // this square is good enough, so return two triangles formed from this square's corners
         let top_right_index = top_left_index + side_length - 1;
         let bottom_left_index = top_left_index + (side_length - 1) * VERTEX_GRID_SIDE_LENGTH;
@@ -76,17 +74,17 @@ fn add_indices(buf: &mut Vec<u32>, frustum: Frustum<f32>, try_culling: bool, cam
         let bottom_right_index = bottom_left_index + next_side_length - 1;
         let bottom_right = [middle_x, middle_y];
 
-        add_indices(buf, frustum, try_culling_subsquares, camera_pos,
-                    top_left, top_left_index, next_side_length);
+        add_indices(buf, frustum, try_culling_subsquares, max_depth,
+                    top_left, top_left_index, next_side_length, current_depth + 1);
 
-        add_indices(buf, frustum, try_culling_subsquares, camera_pos,
-                    top_right, top_right_index, next_side_length);
+        add_indices(buf, frustum, try_culling_subsquares, max_depth,
+                    top_right, top_right_index, next_side_length, current_depth + 1);
 
-        add_indices(buf, frustum, try_culling_subsquares, camera_pos,
-                    bottom_left, bottom_left_index, next_side_length);
+        add_indices(buf, frustum, try_culling_subsquares, max_depth,
+                    bottom_left, bottom_left_index, next_side_length, current_depth + 1);
 
-        add_indices(buf, frustum, try_culling_subsquares, camera_pos,
-                    bottom_right, bottom_right_index, next_side_length);
+        add_indices(buf, frustum, try_culling_subsquares, max_depth,
+                    bottom_right, bottom_right_index, next_side_length, current_depth + 1);
     }
 }
 
@@ -97,13 +95,4 @@ fn relate_square_to_frustum(frustum: Frustum<f32>, top_left: [f32; 2], side_leng
 
     let bounding_box = Aabb3::new(point_a.into(), point_b.into());
     frustum.contains(bounding_box)
-}
-
-fn center_point(top_left: [f32; 2], side_length: u32) -> [f32; 3] {
-    let half_side_length = side_length as f32 / 2.0;
-    [top_left[0] + half_side_length, top_left[0] - half_side_length, 0.0]
-}
-
-fn euclidean_distance(a: [f32; 3], b: [f32; 3]) -> f32 {
-    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).powf(0.5)
 }
