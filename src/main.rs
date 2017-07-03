@@ -12,6 +12,7 @@ extern crate time;
 extern crate vecmath;
 
 mod camera_controller;
+mod constants;
 mod index_getter;
 mod vertex;
 mod vertex_getter;

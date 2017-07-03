@@ -1,7 +1,6 @@
 use collision::{Aabb3, Frustum, Relation};
 
-/// The width of the vertex grid. Used to calculate indices into the vertex grid.
-const VERTEX_GRID_SIDE_LENGTH: u32 = 4097;
+use constants::VERTEX_GRID_SIDE_LENGTH;
 
 /// The greatest possible `z` value any vertex may have.
 ///
