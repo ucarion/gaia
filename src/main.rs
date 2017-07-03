@@ -13,13 +13,11 @@ extern crate vecmath;
 
 mod camera_controller;
 mod index_getter;
-
-use std::io::BufReader;
-use std::fs::File;
+mod vertex;
+mod vertex_getter;
 
 use camera_controller::CameraController;
 
-use byteorder::{LittleEndian, ReadBytesExt};
 use cam::CameraPerspective;
 use fps_counter::FPSCounter;
 use gfx::traits::*;
@@ -27,58 +25,8 @@ use image::GenericImage;
 use piston::window::WindowSettings;
 use piston_window::*;
 
-fn get_elevation_data() -> Vec<Vec<i16>> {
-    println!("Getting elevation data...");
-    let elev_data_width = 4097;
-    let elev_data_height = 4097;
-
-    let compression_factor = 1;
-
-    let result_width = elev_data_width / compression_factor;
-    let result_height = elev_data_height / compression_factor;
-
-    let file = File::open("assets/east_hemisphere_elevation.bin").unwrap();
-    let mut file = BufReader::new(file);
-
-    let mut result = Vec::new();
-    for _ in 0..result_height {
-        result.push(vec![0; result_width]);
-    }
-
-    let mut count = 0;
-
-    while let Ok(elevation) = file.read_i16::<LittleEndian>() {
-        let (x, y) = (count % elev_data_width, count / elev_data_width);
-
-        if x % compression_factor == 0 && y % compression_factor == 0 {
-            result[y / compression_factor][x / compression_factor] = elevation;
-        }
-
-        count += 1;
-    }
-
-    println!("Done getting elevation data.");
-
-    result
-}
-
-
-gfx_vertex_struct!( Vertex {
-    a_pos: [f32; 4] = "a_pos",
-    a_tex_coord: [f32; 2] = "a_tex_coord",
-});
-
-impl Vertex {
-    fn new(pos: [f32; 3], tex_coord: [f32; 2]) -> Vertex {
-        Vertex {
-            a_pos: [pos[0], pos[1], pos[2], 1.0],
-            a_tex_coord: tex_coord,
-        }
-    }
-}
-
 gfx_pipeline!( pipe {
-    vbuf: gfx::VertexBuffer<Vertex> = (),
+    vbuf: gfx::VertexBuffer<vertex::Vertex> = (),
     u_model_view_proj: gfx::Global<[[f32; 4]; 4]> = "u_model_view_proj",
     u_offset_x: gfx::Global<f32> = "u_offset_x",
     t_color: gfx::TextureSampler<[f32; 4]> = "t_color",
@@ -116,10 +64,8 @@ fn main() {
     let model = vecmath::mat4_id();
     let mut camera_controller = CameraController::new();
 
-    let elevation_data = get_elevation_data();
-
     println!("Generating vertices...");
-    let vertex_data = get_vertex_data(elevation_data);
+    let vertex_data = vertex_getter::get_vertices();
     let vbuf = factory.create_vertex_buffer(&vertex_data);
     println!("Done generating vertices.");
 
@@ -198,7 +144,7 @@ fn main() {
 fn create_world_texture<F, R>(factory: &mut F) ->
         (gfx::texture::SamplerInfo, gfx::handle::ShaderResourceView<R, [f32; 4]>)
         where R: gfx::Resources, F: gfx::Factory<R> {
-    let image_data0 = include_bytes!("../assets/generated/east_hemisphere-0.bmp");
+    let image_data0 = include_bytes!("../assets/generated/west_hemisphere-0.bmp");
     let image0 = image::load_from_memory(image_data0).unwrap();
     let buffer0 = image0.to_rgba().into_raw();
 
@@ -209,15 +155,15 @@ fn create_world_texture<F, R>(factory: &mut F) ->
         gfx::texture::AaMode::Single,
     );
 
-    let image_data1 = include_bytes!("../assets/generated/east_hemisphere-1.bmp");
+    let image_data1 = include_bytes!("../assets/generated/west_hemisphere-1.bmp");
     let image1 = image::load_from_memory(image_data1).unwrap();
     let buffer1 = image1.to_rgba().into_raw();
 
-    let image_data2 = include_bytes!("../assets/generated/east_hemisphere-2.bmp");
+    let image_data2 = include_bytes!("../assets/generated/west_hemisphere-2.bmp");
     let image2 = image::load_from_memory(image_data2).unwrap();
     let buffer2 = image2.to_rgba().into_raw();
 
-    let image_data3 = include_bytes!("../assets/generated/east_hemisphere-3.bmp");
+    let image_data3 = include_bytes!("../assets/generated/west_hemisphere-3.bmp");
     let image3 = image::load_from_memory(image_data3).unwrap();
     let buffer3 = image3.to_rgba().into_raw();
 
@@ -239,34 +185,4 @@ fn create_world_texture<F, R>(factory: &mut F) ->
     );
 
     (sampler_info, texture_view)
-}
-
-fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {
-    let tex_coord = [x as f32 / 4097.0, y as f32 / 4097.0];
-    let z = get_z(elevation as f32 - 500.0);
-
-    Vertex::new([x as f32, -(y as f32), z], tex_coord)
-}
-
-fn get_z(elevation: f32) -> f32 {
-    if elevation <= 0.0 {
-        0.0
-    } else {
-        elevation / 50.0
-    }
-}
-
-fn get_vertex_data(elevation_data: Vec<Vec<i16>>) -> Vec<Vertex> {
-    let height = elevation_data.len();
-    let width = elevation_data[0].len();
-
-    let mut vertex_data = Vec::new();
-
-    for y in 0..height {
-        for x in 0..width {
-            vertex_data.push(get_vertex(x, y, elevation_data[y][x]));
-        }
-    }
-
-    vertex_data
 }

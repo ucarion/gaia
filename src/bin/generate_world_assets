@@ -2,14 +2,18 @@
 
 echo "Generating world image from NASA Blue Marble data ..."
 convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
+    -gravity west -crop 50%x100%+0+0 \
+    \( +clone -resize 1350 -write assets/generated/west_hemisphere-3.bmp +delete \) \
+    \( +clone -resize 2700 -write assets/generated/west_hemisphere-2.bmp +delete \) \
+    \( +clone -resize 5400 -write assets/generated/west_hemisphere-1.bmp +delete \) \
+    assets/generated/west_hemisphere-0.bmp
+
+convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
     -gravity east -crop 50%x100%+0+0 \
     \( +clone -resize 1350 -write assets/generated/east_hemisphere-3.bmp +delete \) \
     \( +clone -resize 2700 -write assets/generated/east_hemisphere-2.bmp +delete \) \
     \( +clone -resize 5400 -write assets/generated/east_hemisphere-1.bmp +delete \) \
     assets/generated/east_hemisphere-0.bmp
-
-# convert assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-#     -gravity east -crop 50%x100%+0+0 -resize 10800 assets/east_hemisphere.bmp
 
 # echo "Generating elevation data from NOAA GLOBE data ..."
 # convert -monitor -depth 16 \
