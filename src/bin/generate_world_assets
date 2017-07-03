@@ -3,11 +3,10 @@
 echo "Generating world image from NASA Blue Marble data ..."
 convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
     -gravity east -crop 50%x100%+0+0 \
-    \( +clone -resize 16384 -write assets/generated/east_hemisphere_16384.bmp +delete \) \
-    \( +clone -resize 8192 -write assets/generated/east_hemisphere_8192.bmp +delete \) \
-    \( +clone -resize 4096 -write assets/generated/east_hemisphere_4096.bmp +delete \) \
-    \( +clone -resize 2048 -write assets/generated/east_hemisphere_2048.bmp +delete \) \
-    -resize 1024 assets/generated/east_hemisphere_1024.bmp
+    \( +clone -resize 1350 -write assets/generated/east_hemisphere-3.bmp +delete \) \
+    \( +clone -resize 2700 -write assets/generated/east_hemisphere-2.bmp +delete \) \
+    \( +clone -resize 5400 -write assets/generated/east_hemisphere-1.bmp +delete \) \
+    assets/generated/east_hemisphere-0.bmp
 
 # convert assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
 #     -gravity east -crop 50%x100%+0+0 -resize 10800 assets/east_hemisphere.bmp

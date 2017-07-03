@@ -198,7 +198,7 @@ fn main() {
 fn create_world_texture<F, R>(factory: &mut F) ->
         (gfx::texture::SamplerInfo, gfx::handle::ShaderResourceView<R, [f32; 4]>)
         where R: gfx::Resources, F: gfx::Factory<R> {
-    let image_data0 = include_bytes!("../assets/generated/east_hemisphere_16384.bmp");
+    let image_data0 = include_bytes!("../assets/generated/east_hemisphere-0.bmp");
     let image0 = image::load_from_memory(image_data0).unwrap();
     let buffer0 = image0.to_rgba().into_raw();
 
@@ -209,35 +209,23 @@ fn create_world_texture<F, R>(factory: &mut F) ->
         gfx::texture::AaMode::Single,
     );
 
-    let image_data1 = include_bytes!("../assets/generated/east_hemisphere_8192.bmp");
+    let image_data1 = include_bytes!("../assets/generated/east_hemisphere-1.bmp");
     let image1 = image::load_from_memory(image_data1).unwrap();
     let buffer1 = image1.to_rgba().into_raw();
 
-    // let (width, height) = image1.dimensions();
-    // let texture_kind = gfx::texture::Kind::D2(
-    //     width as u16,
-    //     height as u16,
-    //     gfx::texture::AaMode::Single,
-    // );
-
-    let image_data2 = include_bytes!("../assets/generated/east_hemisphere_4096.bmp");
+    let image_data2 = include_bytes!("../assets/generated/east_hemisphere-2.bmp");
     let image2 = image::load_from_memory(image_data2).unwrap();
     let buffer2 = image2.to_rgba().into_raw();
 
-    let image_data3 = include_bytes!("../assets/generated/east_hemisphere_2048.bmp");
+    let image_data3 = include_bytes!("../assets/generated/east_hemisphere-3.bmp");
     let image3 = image::load_from_memory(image_data3).unwrap();
     let buffer3 = image3.to_rgba().into_raw();
-
-    let image_data4 = include_bytes!("../assets/generated/east_hemisphere_1024.bmp");
-    let image4 = image::load_from_memory(image_data4).unwrap();
-    let buffer4 = image4.to_rgba().into_raw();
 
     let texture_data = [
         buffer0.as_slice(),
         buffer1.as_slice(),
         buffer2.as_slice(),
         buffer3.as_slice(),
-        buffer4.as_slice(),
     ];
 
     let (_texture, texture_view) = factory.create_texture_immutable_u8::<gfx::format::Rgba8>(
@@ -246,7 +234,7 @@ fn create_world_texture<F, R>(factory: &mut F) ->
     ).unwrap();
 
     let sampler_info = gfx::texture::SamplerInfo::new(
-        gfx::texture::FilterMethod::Mipmap,
+        gfx::texture::FilterMethod::Bilinear,
         gfx::texture::WrapMode::Tile,
     );
 
