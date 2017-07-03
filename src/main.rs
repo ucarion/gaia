@@ -123,31 +123,11 @@ fn main() {
     let vbuf = factory.create_vertex_buffer(&vertex_data);
     println!("Done generating vertices.");
 
-    let sampler_info = gfx::texture::SamplerInfo::new(
-        gfx::texture::FilterMethod::Mipmap,
-        gfx::texture::WrapMode::Tile,
-    );
-
-    let image_data1 = include_bytes!("../assets/east_hemisphere_small.jpg");
-    let world_image1 = image::load_from_memory(image_data1).unwrap();
-    let image_buffer1 = world_image1.to_rgba().into_raw();
-
-    let image_data2 = include_bytes!("../assets/east_hemisphere_medium.jpg");
-    let world_image2 = image::load_from_memory(image_data2).unwrap();
-    let (width2, height2) = world_image2.dimensions();
-    let image_buffer2 = world_image2.to_rgba().into_raw();
-
-    // let image_data3 = include_bytes!("../assets/east_hemisphere_big.jpg");
-    // let world_image3 = image::load_from_memory(image_data3).unwrap();
-    // let (width3, height3) = world_image3.dimensions();
-    // let image_buffer3 = world_image3.to_rgba().into_raw();
-
-    let texture_kind = gfx::texture::Kind::D2(width2 as u16, height2 as u16, gfx::texture::AaMode::Single);
-    let texture_data = [/*image_buffer3.as_slice(), */image_buffer2.as_slice(), image_buffer1.as_slice()];
-    let (_texture, texture_view) = factory.create_texture_immutable_u8::<gfx::format::Rgba8>(
-        texture_kind,
-        &texture_data
-    ).unwrap();
+    println!("Generating textures...");
+    let begin = time::now();
+    let (sampler_info, texture_view) = create_world_texture(factory);
+    let end = time::now();
+    println!("Done. Took: {}ms", (end - begin).num_milliseconds());
 
     let mut data = pipe::Data {
         vbuf: vbuf,
@@ -161,7 +141,7 @@ fn main() {
     let mut fps_counter = FPSCounter::new();
     let mut fps = 0;
 
-    let mut glyphs = Glyphs::new("FiraSans-Regular.ttf", factory.clone()).unwrap();
+    let mut glyphs = Glyphs::new("assets/fonts/FiraSans-Regular.ttf", factory.clone()).unwrap();
 
     while let Some(e) = window.next() {
         camera_controller.event(&e);
@@ -200,7 +180,7 @@ fn main() {
         window.draw_2d(&e, |context, graphics| {
             let transform = context.transform.trans(10.0, 10.0);
             text::Text::new_color([0.0, 0.0, 0.0, 1.0], 10).draw(
-                &format!("FPS: {}", fps),
+                &format!("FPS: {} - Camera height: {}", fps, camera_controller.camera_position()[2]),
                 &mut glyphs,
                 &context.draw_state,
                 transform,
@@ -213,6 +193,64 @@ fn main() {
             data.out_depth = window.output_stencil.clone();
         });
     }
+}
+
+fn create_world_texture<F, R>(factory: &mut F) ->
+        (gfx::texture::SamplerInfo, gfx::handle::ShaderResourceView<R, [f32; 4]>)
+        where R: gfx::Resources, F: gfx::Factory<R> {
+    let image_data0 = include_bytes!("../assets/generated/east_hemisphere_16384.bmp");
+    let image0 = image::load_from_memory(image_data0).unwrap();
+    let buffer0 = image0.to_rgba().into_raw();
+
+    let (width, height) = image0.dimensions();
+    let texture_kind = gfx::texture::Kind::D2(
+        width as u16,
+        height as u16,
+        gfx::texture::AaMode::Single,
+    );
+
+    let image_data1 = include_bytes!("../assets/generated/east_hemisphere_8192.bmp");
+    let image1 = image::load_from_memory(image_data1).unwrap();
+    let buffer1 = image1.to_rgba().into_raw();
+
+    // let (width, height) = image1.dimensions();
+    // let texture_kind = gfx::texture::Kind::D2(
+    //     width as u16,
+    //     height as u16,
+    //     gfx::texture::AaMode::Single,
+    // );
+
+    let image_data2 = include_bytes!("../assets/generated/east_hemisphere_4096.bmp");
+    let image2 = image::load_from_memory(image_data2).unwrap();
+    let buffer2 = image2.to_rgba().into_raw();
+
+    let image_data3 = include_bytes!("../assets/generated/east_hemisphere_2048.bmp");
+    let image3 = image::load_from_memory(image_data3).unwrap();
+    let buffer3 = image3.to_rgba().into_raw();
+
+    let image_data4 = include_bytes!("../assets/generated/east_hemisphere_1024.bmp");
+    let image4 = image::load_from_memory(image_data4).unwrap();
+    let buffer4 = image4.to_rgba().into_raw();
+
+    let texture_data = [
+        buffer0.as_slice(),
+        buffer1.as_slice(),
+        buffer2.as_slice(),
+        buffer3.as_slice(),
+        buffer4.as_slice(),
+    ];
+
+    let (_texture, texture_view) = factory.create_texture_immutable_u8::<gfx::format::Rgba8>(
+        texture_kind,
+        &texture_data,
+    ).unwrap();
+
+    let sampler_info = gfx::texture::SamplerInfo::new(
+        gfx::texture::FilterMethod::Mipmap,
+        gfx::texture::WrapMode::Tile,
+    );
+
+    (sampler_info, texture_view)
 }
 
 fn get_vertex(x: usize, y: usize, elevation: i16) -> Vertex {

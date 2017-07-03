@@ -1,26 +1,32 @@
 #!/bin/bash
 
 echo "Generating world image from NASA Blue Marble data ..."
-convert assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-    -gravity west -crop 50%x100%+0+0 -resize 10800 assets/west_hemisphere.jpg
-convert assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-    -gravity east -crop 50%x100%+0+0 -resize 10800 assets/east_hemisphere.jpg
+convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
+    -gravity east -crop 50%x100%+0+0 \
+    \( +clone -resize 16384 -write assets/generated/east_hemisphere_16384.bmp +delete \) \
+    \( +clone -resize 8192 -write assets/generated/east_hemisphere_8192.bmp +delete \) \
+    \( +clone -resize 4096 -write assets/generated/east_hemisphere_4096.bmp +delete \) \
+    \( +clone -resize 2048 -write assets/generated/east_hemisphere_2048.bmp +delete \) \
+    -resize 1024 assets/generated/east_hemisphere_1024.bmp
 
-echo "Generating elevation data from NOAA GLOBE data ..."
-convert -monitor -depth 16 \
-    \( -size 10800x4800 gray:assets/noaa_globe/a10g gray:assets/noaa_globe/b10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    \( -size 10800x6000 gray:assets/noaa_globe/e10g gray:assets/noaa_globe/f10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    \( -size 10800x6000 gray:assets/noaa_globe/i10g gray:assets/noaa_globe/j10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    \( -size 10800x4800 gray:assets/noaa_globe/m10g gray:assets/noaa_globe/n10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    -append \
-    -resize 4097 \
-    gray:assets/west_hemisphere_elevation.bin
+# convert assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
+#     -gravity east -crop 50%x100%+0+0 -resize 10800 assets/east_hemisphere.bmp
 
-convert -monitor -depth 16 \
-    \( -size 10800x4800 gray:assets/noaa_globe/c10g gray:assets/noaa_globe/d10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    \( -size 10800x6000 gray:assets/noaa_globe/g10g gray:assets/noaa_globe/h10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    \( -size 10800x6000 gray:assets/noaa_globe/k10g gray:assets/noaa_globe/l10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    \( -size 10800x4800 gray:assets/noaa_globe/o10g gray:assets/noaa_globe/p10g -evaluate addmodulus 500 -resize 1024 +append \) \
-    -append \
-    -resize 4097 \
-    gray:assets/east_hemisphere_elevation.bin
+# echo "Generating elevation data from NOAA GLOBE data ..."
+# convert -monitor -depth 16 \
+#     \( -size 10800x4800 gray:assets/noaa_globe/a10g gray:assets/noaa_globe/b10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     \( -size 10800x6000 gray:assets/noaa_globe/e10g gray:assets/noaa_globe/f10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     \( -size 10800x6000 gray:assets/noaa_globe/i10g gray:assets/noaa_globe/j10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     \( -size 10800x4800 gray:assets/noaa_globe/m10g gray:assets/noaa_globe/n10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     -append \
+#     -resize 4097 \
+#     gray:assets/west_hemisphere_elevation.bin
+
+# convert -monitor -depth 16 \
+#     \( -size 10800x4800 gray:assets/noaa_globe/c10g gray:assets/noaa_globe/d10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     \( -size 10800x6000 gray:assets/noaa_globe/g10g gray:assets/noaa_globe/h10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     \( -size 10800x6000 gray:assets/noaa_globe/k10g gray:assets/noaa_globe/l10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     \( -size 10800x4800 gray:assets/noaa_globe/o10g gray:assets/noaa_globe/p10g -evaluate addmodulus 500 -resize 1024 +append \) \
+#     -append \
+#     -resize 4097 \
+#     gray:assets/east_hemisphere_elevation.bin
