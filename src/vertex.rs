@@ -1,4 +1,4 @@
-gfx_vertex_struct!( Vertex {
+gfx_vertex_struct!(Vertex {
     a_pos: [f32; 4] = "a_pos",
     a_tex_coord: [f32; 2] = "a_tex_coord",
 });

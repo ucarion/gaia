@@ -10,8 +10,14 @@ const ELEVATION_SCALING_FACTOR: f32 = 100.0;
 
 pub fn get_vertices() -> Vec<Vertex> {
     let mut result = Vec::new();
-    add_vertices(&mut result, include_bytes!("../assets/west_hemisphere_elevation.bin"));
-    add_vertices(&mut result, include_bytes!("../assets/east_hemisphere_elevation.bin"));
+    add_vertices(
+        &mut result,
+        include_bytes!("../assets/generated/west_hemisphere_elevation.bin"),
+    );
+    add_vertices(
+        &mut result,
+        include_bytes!("../assets/generated/east_hemisphere_elevation.bin"),
+    );
     result
 }
 
@@ -20,7 +26,10 @@ fn add_vertices(buf: &mut Vec<Vertex>, elevation_data: &[u8]) {
     let mut count = 0;
 
     while let Ok(elevation) = cursor.read_u16::<LittleEndian>() {
-        let (x, y) = (count % VERTEX_GRID_SIDE_LENGTH, count / VERTEX_GRID_SIDE_LENGTH);
+        let (x, y) = (
+            count % VERTEX_GRID_SIDE_LENGTH,
+            count / VERTEX_GRID_SIDE_LENGTH,
+        );
 
         let actual_elevation = elevation as i16 - ELEVATION_DATA_OFFSET as i16;
         buf.push(get_vertex(x, y, actual_elevation));

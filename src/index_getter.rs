@@ -7,25 +7,86 @@ use constants::VERTEX_GRID_SIDE_LENGTH;
 /// TODO: Make this dynamically calculated.
 const MAX_POSSIBLE_ELEVATION: f32 = 300.0;
 
-pub fn get_indices(mvp_matrix: [[f32; 4]; 4], camera_pos: [f32; 3], top_left: [f32; 2]) -> Vec<u32> {
+/// Returns three tuples, for the three tiles to render. Each tuple contains vertex indices, an
+/// x_offset, and whether the tile is of the western hemisphere.
+pub fn get_indices_and_offsets(
+    mvp_matrix: [[f32; 4]; 4],
+    camera_pos: [f32; 3],
+) -> Vec<(Vec<u32>, f32, bool)> {
     let frustum = Frustum::from_matrix4(mvp_matrix.into()).unwrap();
+    let (camera_x, camera_z) = (camera_pos[0], camera_pos[2]);
 
-    let max_depth = match camera_pos[2] {
-        0.0 ... 300.0 => { 9 },
-        300.0 ... 500.0 => { 8 },
-        500.0 ... 650.0 => { 7 },
-        650.0 ... 1200.0 => { 6 },
-        1200.0 ... 2000.0 => { 5 },
-        _ => { 4 },
+    let max_depth = match camera_z {
+        0.0...300.0 => 9,
+        300.0...500.0 => 8,
+        500.0...650.0 => 7,
+        650.0...1200.0 => 6,
+        1200.0...2000.0 => 5,
+        _ => 4,
     };
 
+    let middle_tile_index = (camera_x / VERTEX_GRID_SIDE_LENGTH as f32).floor() as i64;
+
+    vec![
+        get_tile_index_and_offset(frustum, max_depth, middle_tile_index - 1),
+        get_tile_index_and_offset(frustum, max_depth, middle_tile_index),
+        get_tile_index_and_offset(frustum, max_depth, middle_tile_index + 1),
+    ]
+}
+
+fn get_tile_index_and_offset(
+    frustum: Frustum<f32>,
+    max_depth: usize,
+    tile_index: i64,
+) -> (Vec<u32>, f32, bool) {
+    let x_offset = tile_index as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
+    let top_left = [x_offset, 0.0];
+
+    let tile_is_west = tile_index % 2 == 0;
+    let top_left_index = if tile_is_west {
+        0
+    } else {
+        VERTEX_GRID_SIDE_LENGTH * VERTEX_GRID_SIDE_LENGTH
+    };
+
+    (
+        get_indices(frustum, max_depth, top_left_index, top_left),
+        x_offset,
+        tile_is_west,
+    )
+}
+
+fn get_indices(
+    frustum: Frustum<f32>,
+    max_depth: usize,
+    top_left_index: u32,
+    top_left: [f32; 2],
+) -> Vec<u32> {
+
     let mut result = Vec::new();
-    add_indices(&mut result, frustum, true, max_depth, top_left, 0, VERTEX_GRID_SIDE_LENGTH, 0);
+    add_indices(
+        &mut result,
+        frustum,
+        true,
+        max_depth,
+        top_left,
+        top_left_index,
+        VERTEX_GRID_SIDE_LENGTH,
+        0,
+    );
     result
 }
 
-fn add_indices(buf: &mut Vec<u32>, frustum: Frustum<f32>, try_culling: bool, max_depth: usize,
-               top_left: [f32; 2], top_left_index: u32, side_length: u32, current_depth: usize) {
+fn add_indices(
+    buf: &mut Vec<u32>,
+    frustum: Frustum<f32>,
+    try_culling: bool,
+    max_depth: usize,
+    top_left: [f32; 2],
+    top_left_index: u32,
+    side_length: u32,
+    current_depth: usize,
+) {
     // There are three possible relations between the bounding box surrounding this square and the
     // view frustum:
     //
@@ -73,24 +134,64 @@ fn add_indices(buf: &mut Vec<u32>, frustum: Frustum<f32>, try_culling: bool, max
         let bottom_right_index = bottom_left_index + next_side_length - 1;
         let bottom_right = [middle_x, middle_y];
 
-        add_indices(buf, frustum, try_culling_subsquares, max_depth,
-                    top_left, top_left_index, next_side_length, current_depth + 1);
+        add_indices(
+            buf,
+            frustum,
+            try_culling_subsquares,
+            max_depth,
+            top_left,
+            top_left_index,
+            next_side_length,
+            current_depth + 1,
+        );
 
-        add_indices(buf, frustum, try_culling_subsquares, max_depth,
-                    top_right, top_right_index, next_side_length, current_depth + 1);
+        add_indices(
+            buf,
+            frustum,
+            try_culling_subsquares,
+            max_depth,
+            top_right,
+            top_right_index,
+            next_side_length,
+            current_depth + 1,
+        );
 
-        add_indices(buf, frustum, try_culling_subsquares, max_depth,
-                    bottom_left, bottom_left_index, next_side_length, current_depth + 1);
+        add_indices(
+            buf,
+            frustum,
+            try_culling_subsquares,
+            max_depth,
+            bottom_left,
+            bottom_left_index,
+            next_side_length,
+            current_depth + 1,
+        );
 
-        add_indices(buf, frustum, try_culling_subsquares, max_depth,
-                    bottom_right, bottom_right_index, next_side_length, current_depth + 1);
+        add_indices(
+            buf,
+            frustum,
+            try_culling_subsquares,
+            max_depth,
+            bottom_right,
+            bottom_right_index,
+            next_side_length,
+            current_depth + 1,
+        );
     }
 }
 
-fn relate_square_to_frustum(frustum: Frustum<f32>, top_left: [f32; 2], side_length: u32) -> Relation {
+fn relate_square_to_frustum(
+    frustum: Frustum<f32>,
+    top_left: [f32; 2],
+    side_length: u32,
+) -> Relation {
     let side_length = side_length as f32;
     let point_a = [top_left[0], top_left[1], 0.0];
-    let point_b = [top_left[0] + side_length, top_left[1] - side_length, MAX_POSSIBLE_ELEVATION];
+    let point_b = [
+        top_left[0] + side_length,
+        top_left[1] - side_length,
+        MAX_POSSIBLE_ELEVATION,
+    ];
 
     let bounding_box = Aabb3::new(point_a.into(), point_b.into());
     frustum.contains(bounding_box)
