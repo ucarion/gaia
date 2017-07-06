@@ -15,17 +15,17 @@ echo "${bold}Generating world image from NASA Blue Marble data ...${normal}"
 
 convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
     -gravity west -crop 10800x10800+0+0 \
-    \( +clone -resize 1350 -write assets/generated/west_hemisphere-3.bmp +delete \) \
-    \( +clone -resize 2700 -write assets/generated/west_hemisphere-2.bmp +delete \) \
-    \( +clone -resize 5400 -write assets/generated/west_hemisphere-1.bmp +delete \) \
-    assets/generated/west_hemisphere-0.bmp
+    \( +clone -resize 1350 -write assets/generated/west_hemisphere-3.jpg +delete \) \
+    \( +clone -resize 2700 -write assets/generated/west_hemisphere-2.jpg +delete \) \
+    \( +clone -resize 5400 -write assets/generated/west_hemisphere-1.jpg +delete \) \
+    assets/generated/west_hemisphere-0.jpg
 
 convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
     -gravity east -crop 10800x10800+0+0 \
-    \( +clone -resize 1350 -write assets/generated/east_hemisphere-3.bmp +delete \) \
-    \( +clone -resize 2700 -write assets/generated/east_hemisphere-2.bmp +delete \) \
-    \( +clone -resize 5400 -write assets/generated/east_hemisphere-1.bmp +delete \) \
-    assets/generated/east_hemisphere-0.bmp
+    \( +clone -resize 1350 -write assets/generated/east_hemisphere-3.jpg +delete \) \
+    \( +clone -resize 2700 -write assets/generated/east_hemisphere-2.jpg +delete \) \
+    \( +clone -resize 5400 -write assets/generated/east_hemisphere-1.jpg +delete \) \
+    assets/generated/east_hemisphere-0.jpg
 
 echo "${bold}Generating elevation data from NOAA GLOBE data ...${normal}"
 
