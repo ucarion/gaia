@@ -6,7 +6,7 @@ use vertex::Vertex;
 use byteorder::{LittleEndian, ReadBytesExt};
 
 /// Scale an elevation in meters into a "z" value by dividing by this amount.
-const ELEVATION_SCALING_FACTOR: f32 = 100.0;
+const ELEVATION_SCALING_FACTOR: f32 = 200.0;
 
 pub fn get_vertices() -> Vec<Vertex> {
     let mut result = Vec::new();
