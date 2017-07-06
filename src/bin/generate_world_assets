@@ -1,35 +1,91 @@
 #!/bin/bash
 
-echo "Generating world image from NASA Blue Marble data ..."
+bold=$(tput bold)
+normal=$(tput sgr0)
+
+echo "${bold}Generating world image from NASA Blue Marble data ...${normal}"
+
+# To generate the textures, crop the world image into two halves, and resize
+# each half for each level of detail.
+#
+# TODO
+#
+# This texture approach has weird effects at longitudes 0 and 90, where the
+# tiles meet. I'm not sure how to make these images seamless.
+
 convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-    -gravity west -crop 50%x100%+0+0 \
+    -gravity west -crop 10800x10800+0+0 \
     \( +clone -resize 1350 -write assets/generated/west_hemisphere-3.bmp +delete \) \
     \( +clone -resize 2700 -write assets/generated/west_hemisphere-2.bmp +delete \) \
     \( +clone -resize 5400 -write assets/generated/west_hemisphere-1.bmp +delete \) \
     assets/generated/west_hemisphere-0.bmp
 
 convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-    -gravity east -crop 50%x100%+0+0 \
+    -gravity east -crop 10800x10800+0+0 \
     \( +clone -resize 1350 -write assets/generated/east_hemisphere-3.bmp +delete \) \
     \( +clone -resize 2700 -write assets/generated/east_hemisphere-2.bmp +delete \) \
     \( +clone -resize 5400 -write assets/generated/east_hemisphere-1.bmp +delete \) \
     assets/generated/east_hemisphere-0.bmp
 
-# echo "Generating elevation data from NOAA GLOBE data ..."
-# convert -monitor -depth 16 \
-#     \( -size 10800x4800 gray:assets/noaa_globe/a10g gray:assets/noaa_globe/b10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     \( -size 10800x6000 gray:assets/noaa_globe/e10g gray:assets/noaa_globe/f10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     \( -size 10800x6000 gray:assets/noaa_globe/i10g gray:assets/noaa_globe/j10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     \( -size 10800x4800 gray:assets/noaa_globe/m10g gray:assets/noaa_globe/n10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     -append \
-#     -resize 4097 \
-#     gray:assets/west_hemisphere_elevation.bin
+echo "${bold}Generating elevation data from NOAA GLOBE data ...${normal}"
 
-# convert -monitor -depth 16 \
-#     \( -size 10800x4800 gray:assets/noaa_globe/c10g gray:assets/noaa_globe/d10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     \( -size 10800x6000 gray:assets/noaa_globe/g10g gray:assets/noaa_globe/h10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     \( -size 10800x6000 gray:assets/noaa_globe/k10g gray:assets/noaa_globe/l10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     \( -size 10800x4800 gray:assets/noaa_globe/o10g gray:assets/noaa_globe/p10g -evaluate addmodulus 500 -resize 1024 +append \) \
-#     -append \
-#     -resize 4097 \
-#     gray:assets/east_hemisphere_elevation.bin
+# To generate the heightmap, collect all the NOAA GLOBE tiles into a single
+# image. To generate the west hemisphere, crop out the left 2049x2049. To
+# generate the east hemisphere, crop out the right 2048x2049 and concatenate it
+# with the left 1x2049 column. The result is that the two halves overlap at
+# their edges, making the result seamless.
+#
+# Using imagemagick to work with these grids is a bit of a hack. GLOBE data have
+# some negative values where land is below sea level, and mark open seas as
+# -500m. To work around this, the data are increased by 500 before processing.
+# This offset should agree with the value of `ELEVATION_DATA_OFFSET` in
+# `constants.rs`.
+#
+# The generated image must be of the size `n^2 + 1`. This is to make
+# `index_getter` work.
+#
+# The width of each hemisphere's elevation grid should agree with the value of
+# `VERTEX_GRID_SIDE_LENGTH` in `constants.rs`.
+
+convert -monitor -depth 16 \
+    \( -size 10800x4800 \
+        gray:assets/noaa_globe/a10g \
+        gray:assets/noaa_globe/b10g \
+        gray:assets/noaa_globe/c10g \
+        gray:assets/noaa_globe/d10g \
+        -evaluate addmodulus 500 -resize 2048 +append \
+    \) \
+    \( -size 10800x6000 \
+        gray:assets/noaa_globe/e10g \
+        gray:assets/noaa_globe/f10g \
+        gray:assets/noaa_globe/g10g \
+        gray:assets/noaa_globe/h10g \
+        -evaluate addmodulus 500 -resize 2048 +append \
+    \) \
+    \( -size 10800x6000 \
+        gray:assets/noaa_globe/i10g \
+        gray:assets/noaa_globe/j10g \
+        gray:assets/noaa_globe/k10g \
+        gray:assets/noaa_globe/l10g \
+        -evaluate addmodulus 500 -resize 2048 +append \
+    \) \
+    \( -size 10800x4800 \
+        gray:assets/noaa_globe/m10g \
+        gray:assets/noaa_globe/n10g \
+        gray:assets/noaa_globe/o10g \
+        gray:assets/noaa_globe/p10g \
+        -evaluate addmodulus 500 -resize 2048 +append \
+    \) \
+    -append \
+    -resize 4097x2049 \
+    gray:assets/generated/globe_elevation.bin
+
+convert -monitor -depth 16 -size 4097x2049 gray:assets/generated/globe_elevation.bin \
+    -crop 2049x2049+0+0 \
+    gray:assets/generated/west_hemisphere_elevation.bin
+
+convert -monitor -depth 16 -size 4097x2049 \
+    \( gray:assets/generated/globe_elevation.bin -crop 2048x2049+2048+0 \) \
+    \( gray:assets/generated/globe_elevation.bin -crop 1x2049+0+0 \) \
+    +append \
+    gray:assets/generated/east_hemisphere_elevation.bin

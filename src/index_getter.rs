@@ -39,7 +39,7 @@ fn get_tile_index_and_offset(
     max_depth: usize,
     tile_index: i64,
 ) -> (Vec<u32>, f32, bool) {
-    let x_offset = tile_index as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
+    let x_offset = tile_index as f32 * (VERTEX_GRID_SIDE_LENGTH - 1) as f32;
     let top_left = [x_offset, 0.0];
 
     let tile_is_west = tile_index % 2 == 0;
