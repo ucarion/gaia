@@ -168,20 +168,20 @@ where
     let texture_view_west = create_world_texture(
         factory,
         [
-            include_bytes!("../assets/generated/west_hemisphere-0.bmp"),
-            include_bytes!("../assets/generated/west_hemisphere-1.bmp"),
-            include_bytes!("../assets/generated/west_hemisphere-2.bmp"),
-            include_bytes!("../assets/generated/west_hemisphere-3.bmp"),
+            include_bytes!("../assets/generated/west_hemisphere-0.jpg"),
+            include_bytes!("../assets/generated/west_hemisphere-1.jpg"),
+            include_bytes!("../assets/generated/west_hemisphere-2.jpg"),
+            include_bytes!("../assets/generated/west_hemisphere-3.jpg"),
         ],
     );
 
     let texture_view_east = create_world_texture(
         factory,
         [
-            include_bytes!("../assets/generated/east_hemisphere-0.bmp"),
-            include_bytes!("../assets/generated/east_hemisphere-1.bmp"),
-            include_bytes!("../assets/generated/east_hemisphere-2.bmp"),
-            include_bytes!("../assets/generated/east_hemisphere-3.bmp"),
+            include_bytes!("../assets/generated/east_hemisphere-0.jpg"),
+            include_bytes!("../assets/generated/east_hemisphere-1.jpg"),
+            include_bytes!("../assets/generated/east_hemisphere-2.jpg"),
+            include_bytes!("../assets/generated/east_hemisphere-3.jpg"),
         ],
     );
 
@@ -214,8 +214,7 @@ where
     let image2 = image::load_from_memory(image_data[2]).unwrap();
     let buffer2 = image2.to_rgba().into_raw();
 
-    let image_data3 = include_bytes!("../assets/generated/east_hemisphere-3.bmp");
-    let image3 = image::load_from_memory(image_data3).unwrap();
+    let image3 = image::load_from_memory(image_data[3]).unwrap();
     let buffer3 = image3.to_rgba().into_raw();
 
     let texture_data = [
