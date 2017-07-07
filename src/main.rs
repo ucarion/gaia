@@ -19,6 +19,7 @@ mod vertex;
 mod vertex_getter;
 
 use camera_controller::CameraController;
+use index_getter::{TileInfo, TileTexture};
 
 use cam::CameraPerspective;
 use fps_counter::FPSCounter;
@@ -115,23 +116,22 @@ fn main() {
                 camera_controller.camera_position(),
             );
 
-            for (indices, x_offset, tile_is_west) in tiles_to_render {
-                let index_buffer = factory.create_index_buffer(indices.as_slice());
+            for tile_info in tiles_to_render {
+                let index_buffer = factory.create_index_buffer(tile_info.indices.as_slice());
                 let slice = gfx::Slice {
                     start: 0,
-                    end: indices.len() as u32,
+                    end: tile_info.indices.len() as u32,
                     base_vertex: 0,
                     instances: None,
                     buffer: index_buffer,
                 };
 
-                let texture_view = if tile_is_west {
-                    texture_views[0].clone()
-                } else {
-                    texture_views[1].clone()
+                let texture_view = match tile_info.texture {
+                    TileTexture::WestHemisphere => texture_views[0].clone(),
+                    TileTexture::EastHemisphere => texture_views[1].clone(),
                 };
 
-                data.u_offset_x = x_offset;
+                data.u_offset_x = tile_info.x_offset;
                 data.t_color.0 = texture_view;
                 window.encoder.draw(&slice, &pso, &data);
             }
