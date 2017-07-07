@@ -6,4 +6,4 @@
 pub const ELEVATION_DATA_OFFSET: u16 = 500;
 
 /// The width of the vertex grid found in assets/generated/*_hemisphere_elevation.bin
-pub const VERTEX_GRID_SIDE_LENGTH: u32 = 2049;
+pub const VERTEX_GRID_SIDE_LENGTH: u32 = 2048;
