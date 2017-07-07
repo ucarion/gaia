@@ -19,6 +19,8 @@ mod tile;
 mod vertex;
 mod vertex_getter;
 
+use std::collections::HashMap;
+
 use camera_controller::CameraController;
 use tile::TileKind;
 
@@ -70,22 +72,32 @@ fn main() {
 
     println!("Generating vertices...");
     let begin = time::now();
-    let vertex_data = vertex_getter::get_vertices();
-    let vbuf = factory.create_vertex_buffer(&vertex_data);
+
+    let vertices_by_kind = vertex_getter::get_vertices();
+    let vertex_buffers_by_kind: HashMap<_, _> = vertices_by_kind
+        .iter()
+        .map(|(kind, vertices)| {
+            (kind, factory.create_vertex_buffer(&vertices))
+        })
+        .collect();
+
     let end = time::now();
     println!("Done. Took: {}ms", (end - begin).num_milliseconds());
 
     println!("Generating textures...");
     let begin = time::now();
-    let (texture_views, sampler) = texture_getter::create_world_textures_and_sampler(&mut factory);
+
+    let (textures_by_kind, sampler) =
+        texture_getter::create_world_textures_and_sampler(&mut factory);
+
     let end = time::now();
     println!("Done. Took: {}ms", (end - begin).num_milliseconds());
 
     let mut data = pipe::Data {
-        vbuf: vbuf,
+        vbuf: vertex_buffers_by_kind[&TileKind::WestHemisphere].clone(),
         u_model_view_proj: [[0.0; 4]; 4],
         u_offset_x: 0.0,
-        t_color: (texture_views[1].clone(), sampler),
+        t_color: (textures_by_kind[&TileKind::WestHemisphere].clone(), sampler),
         out_color: window.output_color.clone(),
         out_depth: window.output_stencil.clone(),
     };
@@ -127,13 +139,9 @@ fn main() {
                     buffer: index_buffer,
                 };
 
-                let texture_view = match tile_info.kind {
-                    TileKind::WestHemisphere => texture_views[0].clone(),
-                    TileKind::EastHemisphere => texture_views[1].clone(),
-                };
-
+                data.vbuf = vertex_buffers_by_kind[&tile_info.kind].clone();
                 data.u_offset_x = tile_info.x_offset;
-                data.t_color.0 = texture_view;
+                data.t_color.0 = textures_by_kind[&tile_info.kind].clone();
                 window.encoder.draw(&slice, &pso, &data);
             }
 

@@ -1,34 +1,45 @@
+use std::collections::HashMap;
+
+use tile::TileKind;
+
 use image::{self, GenericImage};
 use gfx;
 
 pub fn create_world_textures_and_sampler<F, R>(
     factory: &mut F,
 ) -> (
-    [gfx::handle::ShaderResourceView<R, [f32; 4]>; 2],
+    HashMap<TileKind, gfx::handle::ShaderResourceView<R, [f32; 4]>>,
     gfx::handle::Sampler<R>,
 )
 where
     R: gfx::Resources,
     F: gfx::Factory<R>,
 {
-    let texture_view_west = create_world_texture(
-        factory,
-        [
-            include_bytes!("../assets/generated/west_hemisphere-0.jpg"),
-            include_bytes!("../assets/generated/west_hemisphere-1.jpg"),
-            include_bytes!("../assets/generated/west_hemisphere-2.jpg"),
-            include_bytes!("../assets/generated/west_hemisphere-3.jpg"),
-        ],
-    );
+    let mut textures_by_kind = HashMap::new();
 
-    let texture_view_east = create_world_texture(
-        factory,
-        [
-            include_bytes!("../assets/generated/east_hemisphere-0.jpg"),
-            include_bytes!("../assets/generated/east_hemisphere-1.jpg"),
-            include_bytes!("../assets/generated/east_hemisphere-2.jpg"),
-            include_bytes!("../assets/generated/east_hemisphere-3.jpg"),
-        ],
+    textures_by_kind.insert(
+        TileKind::WestHemisphere,
+        create_world_texture(
+            factory,
+            [
+                include_bytes!("../assets/generated/west_hemisphere-0.jpg"),
+                include_bytes!("../assets/generated/west_hemisphere-1.jpg"),
+                include_bytes!("../assets/generated/west_hemisphere-2.jpg"),
+                include_bytes!("../assets/generated/west_hemisphere-3.jpg"),
+            ],
+        ),
+    );
+    textures_by_kind.insert(
+        TileKind::EastHemisphere,
+        create_world_texture(
+            factory,
+            [
+                include_bytes!("../assets/generated/east_hemisphere-0.jpg"),
+                include_bytes!("../assets/generated/east_hemisphere-1.jpg"),
+                include_bytes!("../assets/generated/east_hemisphere-2.jpg"),
+                include_bytes!("../assets/generated/east_hemisphere-3.jpg"),
+            ],
+        ),
     );
 
     let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
@@ -36,7 +47,8 @@ where
         gfx::texture::WrapMode::Tile,
     ));
 
-    ([texture_view_west, texture_view_east], sampler)
+
+    (textures_by_kind, sampler)
 }
 
 fn create_world_texture<F, R>(

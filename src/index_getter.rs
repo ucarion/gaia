@@ -44,13 +44,7 @@ fn get_tile_index_and_offset(
 
     let top_left = [x_offset, 0.0];
     let tile_is_west = tile_index % 2 == 0;
-    let top_left_index = if tile_is_west {
-        0
-    } else {
-        VERTEX_GRID_SIDE_LENGTH * VERTEX_GRID_SIDE_LENGTH
-    };
-
-    let indices = get_indices(frustum, max_depth, top_left_index, top_left);
+    let indices = get_indices(frustum, max_depth, 0, top_left);
 
     let kind = if tile_is_west {
         TileKind::WestHemisphere

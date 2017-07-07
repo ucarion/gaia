@@ -4,6 +4,7 @@ pub struct TileRenderInfo {
     pub kind: TileKind,
 }
 
+#[derive(Eq, PartialEq, Hash)]
 pub enum TileKind {
     WestHemisphere,
     EastHemisphere,
