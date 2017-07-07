@@ -8,8 +8,7 @@ use tile::{TileRenderInfo, TileKind};
 /// TODO: Make this dynamically calculated.
 const MAX_POSSIBLE_ELEVATION: f32 = 300.0;
 
-/// Returns three tuples, for the three tiles to render. Each tuple contains vertex indices, an
-/// x_offset, and whether the tile is of the western hemisphere.
+/// Returns a list of `TileRenderInfo`s for potentially visible tiles.
 pub fn get_indices_and_offsets(
     mvp_matrix: [[f32; 4]; 4],
     camera_pos: [f32; 3],
@@ -29,14 +28,14 @@ pub fn get_indices_and_offsets(
     let middle_tile_index = (camera_x / VERTEX_GRID_SIDE_LENGTH as f32).floor() as i64;
 
     vec![
-        get_tile_index_and_offset(frustum, max_depth, middle_tile_index - 1),
-        get_tile_index_and_offset(frustum, max_depth, middle_tile_index),
-        get_tile_index_and_offset(frustum, max_depth, middle_tile_index + 1),
+        get_tile_index_and_offset(&frustum, max_depth, middle_tile_index - 1),
+        get_tile_index_and_offset(&frustum, max_depth, middle_tile_index),
+        get_tile_index_and_offset(&frustum, max_depth, middle_tile_index + 1),
     ]
 }
 
 fn get_tile_index_and_offset(
-    frustum: Frustum<f32>,
+    frustum: &Frustum<f32>,
     max_depth: usize,
     tile_index: i64,
 ) -> TileRenderInfo {
@@ -44,7 +43,7 @@ fn get_tile_index_and_offset(
 
     let top_left = [x_offset, 0.0];
     let tile_is_west = tile_index % 2 == 0;
-    let indices = get_indices(frustum, max_depth, 0, top_left);
+    let indices = get_indices(frustum, max_depth, top_left);
 
     let kind = if tile_is_west {
         TileKind::WestHemisphere
@@ -59,143 +58,241 @@ fn get_tile_index_and_offset(
     }
 }
 
-fn get_indices(
-    frustum: Frustum<f32>,
-    max_depth: usize,
-    top_left_index: u32,
-    top_left: [f32; 2],
-) -> Vec<u32> {
+fn get_indices(frustum: &Frustum<f32>, max_depth: usize, top_left: [f32; 2]) -> Vec<u32> {
+    let full_rectangle =
+        Rectangle::full_rectangle(top_left, VERTEX_GRID_SIDE_LENGTH, VERTEX_GRID_SIDE_LENGTH);
 
     let mut result = Vec::new();
-    add_indices(
-        &mut result,
-        frustum,
-        true,
-        max_depth,
-        top_left,
-        top_left_index,
-        VERTEX_GRID_SIDE_LENGTH,
-        0,
-    );
+    append_indices(&mut result, frustum, max_depth, 0, &full_rectangle, true);
     result
 }
 
-fn add_indices(
+fn append_indices(
     buf: &mut Vec<u32>,
-    frustum: Frustum<f32>,
-    try_culling: bool,
+    frustum: &Frustum<f32>,
     max_depth: usize,
-    top_left: [f32; 2],
-    top_left_index: u32,
-    side_length: u32,
     current_depth: usize,
+    rectangle: &Rectangle,
+    try_culling: bool,
 ) {
-    // There are three possible relations between the bounding box surrounding this square and the
-    // view frustum:
-    //
-    // * It is entirely outside the frustum: The square cannot be seen, and no indices from it or
-    // any subsquare are necessary.
-    //
-    // * It crosses the frustum: The square can partially be seen. Indices from it are necessary,
-    // but some subsquares might be entirely outside the frustum.
-    //
-    // * It is entirely within the frustum: The square can entirely be seen. Indices from it are
-    // necessary, and there's no chance of any subsquare crossing or falling beyond the frustum.
-    let (cull_square, try_culling_subsquares) = if try_culling {
-        let relation = relate_square_to_frustum(frustum, top_left, side_length);
+    if current_depth == max_depth {
+        // we've reached the recursion limit, so return the current rectangle's indices
+        buf.extend_from_slice(&rectangle.indices());
+        return;
+    }
 
+    // There are three possible relations between the bounding box surrounding this rectangle and
+    // the view frustum:
+    //
+    // * It is entirely outside the frustum: The rectangle cannot be seen, and no indices from it
+    // or any sub-rectangle are necessary.
+    //
+    // * It crosses the frustum: The rectangle can partially be seen. Indices from it are
+    // necessary, but some sub-rectangles might be entirely outside the frustum.
+    //
+    // * It is entirely within the frustum: The rectangle can entirely be seen. Indices from it are
+    // necessary, and there's no chance of any sub-rectangle crossing or falling beyond the
+    // frustum.
+    let (cull_rectangle, try_culling_sub_rectangles) = if try_culling {
+        let relation = rectangle.relate_to_frustum(frustum);
         (relation == Relation::Out, relation == Relation::Cross)
     } else {
         (false, false)
     };
 
-    if cull_square {
+    if cull_rectangle {
         return;
     }
 
-    if current_depth == max_depth {
-        // this square is good enough, so return two triangles formed from this square's corners
-        let top_right_index = top_left_index + side_length - 1;
-        let bottom_left_index = top_left_index + (side_length - 1) * VERTEX_GRID_SIDE_LENGTH;
-        let bottom_right_index = bottom_left_index + side_length - 1;
+    match rectangle.sub_rectangles() {
+        Some(sub_rectangles) => {
+            // recursively get indices from sub-rectangles
+            for sub_rectangle in sub_rectangles {
+                append_indices(
+                    buf,
+                    frustum,
+                    max_depth,
+                    current_depth + 1,
+                    &sub_rectangle,
+                    try_culling_sub_rectangles,
+                );
+            }
+        }
 
-        buf.extend_from_slice(&[top_left_index, bottom_left_index, top_right_index]);
-        buf.extend_from_slice(&[top_right_index, bottom_left_index, bottom_right_index]);
-    } else {
-        // this square is not good enough, so split it into four quadrants and recursively get
-        // indices for those squares
-        let next_side_length = (side_length / 2) + 1;
-        let middle_x = top_left[0] + next_side_length as f32 - 1.0;
-        let middle_y = top_left[1] - next_side_length as f32 + 1.0;
-
-        let top_right_index = top_left_index + next_side_length - 1;
-        let top_right = [middle_x, top_left[1]];
-
-        let bottom_left_index = top_left_index + (next_side_length - 1) * VERTEX_GRID_SIDE_LENGTH;
-        let bottom_left = [top_left[0], middle_y];
-
-        let bottom_right_index = bottom_left_index + next_side_length - 1;
-        let bottom_right = [middle_x, middle_y];
-
-        add_indices(
-            buf,
-            frustum,
-            try_culling_subsquares,
-            max_depth,
-            top_left,
-            top_left_index,
-            next_side_length,
-            current_depth + 1,
-        );
-
-        add_indices(
-            buf,
-            frustum,
-            try_culling_subsquares,
-            max_depth,
-            top_right,
-            top_right_index,
-            next_side_length,
-            current_depth + 1,
-        );
-
-        add_indices(
-            buf,
-            frustum,
-            try_culling_subsquares,
-            max_depth,
-            bottom_left,
-            bottom_left_index,
-            next_side_length,
-            current_depth + 1,
-        );
-
-        add_indices(
-            buf,
-            frustum,
-            try_culling_subsquares,
-            max_depth,
-            bottom_right,
-            bottom_right_index,
-            next_side_length,
-            current_depth + 1,
-        );
+        None => {
+            // there are no sub-rectangles to work with, so return current rectangle instead
+            buf.extend_from_slice(&rectangle.indices());
+        }
     }
 }
 
-fn relate_square_to_frustum(
-    frustum: Frustum<f32>,
+struct Rectangle {
     top_left: [f32; 2],
-    side_length: u32,
-) -> Relation {
-    let side_length = side_length as f32;
-    let point_a = [top_left[0], top_left[1], 0.0];
-    let point_b = [
-        top_left[0] + side_length,
-        top_left[1] - side_length,
-        MAX_POSSIBLE_ELEVATION,
-    ];
+    top_left_index: u32,
+    width: u32,
+    height: u32,
+    grid_width: u32,
+}
 
-    let bounding_box = Aabb3::new(point_a.into(), point_b.into());
-    frustum.contains(bounding_box)
+impl Rectangle {
+    fn full_rectangle(top_left: [f32; 2], grid_width: u32, grid_height: u32) -> Rectangle {
+        Rectangle {
+            top_left: top_left,
+            top_left_index: 0,
+            width: grid_width,
+            height: grid_height,
+            grid_width: grid_width,
+        }
+    }
+
+    fn relate_to_frustum(&self, frustum: &Frustum<f32>) -> Relation {
+        let point_a = [self.top_left[0], self.top_left[1], 0.0];
+        let point_b = [
+            self.top_left[0] + (self.width - 1) as f32,
+            self.top_left[1] - (self.height - 1) as f32,
+            MAX_POSSIBLE_ELEVATION,
+        ];
+
+        let bounding_box = Aabb3::new(point_a.into(), point_b.into());
+        frustum.contains(bounding_box)
+    }
+
+    fn indices(&self) -> [u32; 6] {
+        [
+            self.top_left_index,
+            self.bottom_left_index(),
+            self.top_right_index(),
+
+            self.top_right_index(),
+            self.bottom_left_index(),
+            self.bottom_right_index(),
+        ]
+    }
+
+    fn sub_rectangles(&self) -> Option<Vec<Rectangle>> {
+        if !self.can_divide_vertically() && !self.can_divide_horizontally() {
+            return None;
+        }
+
+        let left_width = self.width / 2 + 1;
+        let right_width = self.width - left_width + 1;
+        let middle_x = self.top_left[0] + left_width as f32 - 1.0;
+        let top_middle = [middle_x, self.top_left[1]];
+
+        if self.can_divide_vertically() && !self.can_divide_vertically() {
+            // divide into a left and right half
+            let left = Rectangle {
+                top_left: self.top_left,
+                top_left_index: self.top_left_index,
+                width: left_width,
+                height: self.height,
+                grid_width: self.grid_width,
+            };
+
+            let right = Rectangle {
+                top_left: top_middle,
+                top_left_index: self.top_middle_index(),
+                width: right_width,
+                height: self.height,
+                grid_width: self.grid_width,
+            };
+
+            return Some(vec![left, right]);
+        }
+
+        let top_height = self.height / 2 + 1;
+        let bottom_height = self.height - top_height + 1;
+        let middle_y = self.top_left[1] - top_height as f32 + 1.0;
+        let left_middle = [self.top_left[0], middle_y];
+
+        if !self.can_divide_vertically() && self.can_divide_horizontally() {
+            // divide into a top and bottom half
+            let top = Rectangle {
+                top_left: self.top_left,
+                top_left_index: self.top_left_index,
+                width: self.width,
+                height: top_height,
+                grid_width: self.grid_width,
+            };
+
+            let bottom = Rectangle {
+                top_left: left_middle,
+                top_left_index: self.left_middle_index(),
+                width: self.width,
+                height: bottom_height,
+                grid_width: self.grid_width,
+            };
+
+            return Some(vec![top, bottom]);
+        }
+
+        // divide into four quadrants
+        let center = [middle_x, middle_y];
+
+        let top_left = Rectangle {
+            top_left: self.top_left,
+            top_left_index: self.top_left_index,
+            width: left_width,
+            height: top_height,
+            grid_width: self.grid_width,
+        };
+
+        let top_right = Rectangle {
+            top_left: top_middle,
+            top_left_index: self.top_middle_index(),
+            width: right_width,
+            height: top_height,
+            grid_width: self.grid_width,
+        };
+
+        let bottom_left = Rectangle {
+            top_left: left_middle,
+            top_left_index: self.left_middle_index(),
+            width: left_width,
+            height: bottom_height,
+            grid_width: self.grid_width,
+        };
+
+        let bottom_right = Rectangle {
+            top_left: center,
+            top_left_index: self.center_index(),
+            width: right_width,
+            height: bottom_height,
+            grid_width: self.grid_width,
+        };
+
+        Some(vec![top_left, top_right, bottom_left, bottom_right])
+    }
+
+    fn can_divide_vertically(&self) -> bool {
+        self.width > 2
+    }
+
+    fn can_divide_horizontally(&self) -> bool {
+        self.height > 2
+    }
+
+    fn top_right_index(&self) -> u32 {
+        self.top_left_index + self.width - 1
+    }
+
+    fn bottom_left_index(&self) -> u32 {
+        self.top_left_index + (self.height - 1) * self.grid_width
+    }
+
+    fn bottom_right_index(&self) -> u32 {
+        self.bottom_left_index() + self.width - 1
+    }
+
+    fn top_middle_index(&self) -> u32 {
+        self.top_left_index + self.width / 2
+    }
+
+    fn left_middle_index(&self) -> u32 {
+        self.top_left_index + (self.height / 2) * self.grid_width
+    }
+
+    fn center_index(&self) -> u32 {
+        self.left_middle_index() + self.width / 2
+    }
 }
