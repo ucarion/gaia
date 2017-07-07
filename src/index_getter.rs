@@ -1,26 +1,19 @@
 use collision::{Aabb3, Frustum, Relation};
 
 use constants::VERTEX_GRID_SIDE_LENGTH;
+use tile::{TileRenderInfo, TileKind};
 
 /// The greatest possible `z` value any vertex may have.
 ///
 /// TODO: Make this dynamically calculated.
 const MAX_POSSIBLE_ELEVATION: f32 = 300.0;
 
-pub struct TileInfo {
-    pub indices: Vec<u32>,
-    pub x_offset: f32,
-    pub texture: TileTexture,
-}
-
-pub enum TileTexture {
-    WestHemisphere,
-    EastHemisphere,
-}
-
 /// Returns three tuples, for the three tiles to render. Each tuple contains vertex indices, an
 /// x_offset, and whether the tile is of the western hemisphere.
-pub fn get_indices_and_offsets(mvp_matrix: [[f32; 4]; 4], camera_pos: [f32; 3]) -> Vec<TileInfo> {
+pub fn get_indices_and_offsets(
+    mvp_matrix: [[f32; 4]; 4],
+    camera_pos: [f32; 3],
+) -> Vec<TileRenderInfo> {
     let frustum = Frustum::from_matrix4(mvp_matrix.into()).unwrap();
     let (camera_x, camera_z) = (camera_pos[0], camera_pos[2]);
 
@@ -42,7 +35,11 @@ pub fn get_indices_and_offsets(mvp_matrix: [[f32; 4]; 4], camera_pos: [f32; 3]) 
     ]
 }
 
-fn get_tile_index_and_offset(frustum: Frustum<f32>, max_depth: usize, tile_index: i64) -> TileInfo {
+fn get_tile_index_and_offset(
+    frustum: Frustum<f32>,
+    max_depth: usize,
+    tile_index: i64,
+) -> TileRenderInfo {
     let x_offset = tile_index as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
 
     let top_left = [x_offset, 0.0];
@@ -55,16 +52,16 @@ fn get_tile_index_and_offset(frustum: Frustum<f32>, max_depth: usize, tile_index
 
     let indices = get_indices(frustum, max_depth, top_left_index, top_left);
 
-    let texture = if tile_is_west {
-        TileTexture::WestHemisphere
+    let kind = if tile_is_west {
+        TileKind::WestHemisphere
     } else {
-        TileTexture::EastHemisphere
+        TileKind::EastHemisphere
     };
 
-    TileInfo {
+    TileRenderInfo {
         indices: indices,
         x_offset: x_offset,
-        texture: texture,
+        kind: kind,
     }
 }
 

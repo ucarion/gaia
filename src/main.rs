@@ -15,11 +15,12 @@ mod camera_controller;
 mod constants;
 mod index_getter;
 mod texture_getter;
+mod tile;
 mod vertex;
 mod vertex_getter;
 
 use camera_controller::CameraController;
-use index_getter::{TileInfo, TileTexture};
+use tile::TileKind;
 
 use cam::CameraPerspective;
 use fps_counter::FPSCounter;
@@ -126,9 +127,9 @@ fn main() {
                     buffer: index_buffer,
                 };
 
-                let texture_view = match tile_info.texture {
-                    TileTexture::WestHemisphere => texture_views[0].clone(),
-                    TileTexture::EastHemisphere => texture_views[1].clone(),
+                let texture_view = match tile_info.kind {
+                    TileKind::WestHemisphere => texture_views[0].clone(),
+                    TileKind::EastHemisphere => texture_views[1].clone(),
                 };
 
                 data.u_offset_x = tile_info.x_offset;
