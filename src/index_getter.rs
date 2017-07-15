@@ -26,30 +26,77 @@ pub fn get_indices_and_offsets(
     };
 
     let middle_tile_index = (camera_x / VERTEX_GRID_SIDE_LENGTH as f32).floor() as i64;
+    let middle_is_west = middle_tile_index % 2 == 0;
 
-    vec![
-        get_tile_index_and_offset(&frustum, max_depth, middle_tile_index - 1),
-        get_tile_index_and_offset(&frustum, max_depth, middle_tile_index),
-        get_tile_index_and_offset(&frustum, max_depth, middle_tile_index + 1),
-    ]
+    let left_offset = (middle_tile_index - 1) as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
+    let middle_offset = middle_tile_index as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
+    let right_offset = (middle_tile_index + 1) as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
+
+    let tiles = vec![
+        (
+            if middle_is_west {
+                TileKind::EastHemisphere
+            } else {
+                TileKind::WestHemisphere
+            },
+            left_offset,
+            VERTEX_GRID_SIDE_LENGTH,
+        ),
+        (
+            if middle_is_west {
+                TileKind::Meridian180
+            } else {
+                TileKind::Meridian0
+            },
+            middle_offset - 1.0,
+            2,
+        ),
+        (
+            if middle_is_west {
+                TileKind::WestHemisphere
+            } else {
+                TileKind::EastHemisphere
+            },
+            middle_offset,
+            VERTEX_GRID_SIDE_LENGTH,
+        ),
+        (
+            if middle_is_west {
+                TileKind::Meridian0
+            } else {
+                TileKind::Meridian180
+            },
+            right_offset - 1.0,
+            2,
+        ),
+        (
+            if middle_is_west {
+                TileKind::EastHemisphere
+            } else {
+                TileKind::WestHemisphere
+            },
+            right_offset,
+            VERTEX_GRID_SIDE_LENGTH,
+        ),
+    ];
+
+    tiles
+        .into_iter()
+        .map(|(kind, x_offset, grid_width)| {
+            get_tile_index_and_offset(&frustum, max_depth, kind, x_offset, grid_width)
+        })
+        .collect()
 }
 
 fn get_tile_index_and_offset(
     frustum: &Frustum<f32>,
     max_depth: usize,
-    tile_index: i64,
+    kind: TileKind,
+    x_offset: f32,
+    grid_width: u32,
 ) -> TileRenderInfo {
-    let x_offset = tile_index as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
-
     let top_left = [x_offset, 0.0];
-    let tile_is_west = tile_index % 2 == 0;
-    let indices = get_indices(frustum, max_depth, top_left);
-
-    let kind = if tile_is_west {
-        TileKind::WestHemisphere
-    } else {
-        TileKind::EastHemisphere
-    };
+    let indices = get_indices(frustum, max_depth, top_left, grid_width);
 
     TileRenderInfo {
         indices: indices,
@@ -58,9 +105,13 @@ fn get_tile_index_and_offset(
     }
 }
 
-fn get_indices(frustum: &Frustum<f32>, max_depth: usize, top_left: [f32; 2]) -> Vec<u32> {
-    let full_rectangle =
-        Rectangle::full_rectangle(top_left, VERTEX_GRID_SIDE_LENGTH, VERTEX_GRID_SIDE_LENGTH);
+fn get_indices(
+    frustum: &Frustum<f32>,
+    max_depth: usize,
+    top_left: [f32; 2],
+    grid_width: u32,
+) -> Vec<u32> {
+    let full_rectangle = Rectangle::full_rectangle(top_left, grid_width, VERTEX_GRID_SIDE_LENGTH);
 
     let mut result = Vec::new();
     append_indices(&mut result, frustum, max_depth, 0, &full_rectangle, true);
@@ -126,6 +177,7 @@ fn append_indices(
     }
 }
 
+#[derive(Debug)]
 struct Rectangle {
     top_left: [f32; 2],
     top_left_index: u32,
@@ -179,7 +231,7 @@ impl Rectangle {
         let middle_x = self.top_left[0] + left_width as f32 - 1.0;
         let top_middle = [middle_x, self.top_left[1]];
 
-        if self.can_divide_vertically() && !self.can_divide_vertically() {
+        if self.can_divide_vertically() && !self.can_divide_horizontally() {
             // divide into a left and right half
             let left = Rectangle {
                 top_left: self.top_left,
