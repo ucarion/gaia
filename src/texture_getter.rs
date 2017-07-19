@@ -22,10 +22,10 @@ where
         create_world_texture(
             factory,
             &[
-                include_bytes!("../assets/generated/west_hemisphere-0.jpg"),
-                include_bytes!("../assets/generated/west_hemisphere-1.jpg"),
-                include_bytes!("../assets/generated/west_hemisphere-2.jpg"),
-                include_bytes!("../assets/generated/west_hemisphere-3.jpg"),
+                include_bytes!("../assets/generated/tiles/west_hemisphere/0.jpg"),
+                include_bytes!("../assets/generated/tiles/west_hemisphere/1.jpg"),
+                include_bytes!("../assets/generated/tiles/west_hemisphere/2.jpg"),
+                include_bytes!("../assets/generated/tiles/west_hemisphere/3.jpg"),
             ],
         ),
     );
@@ -34,10 +34,10 @@ where
         create_world_texture(
             factory,
             &[
-                include_bytes!("../assets/generated/east_hemisphere-0.jpg"),
-                include_bytes!("../assets/generated/east_hemisphere-1.jpg"),
-                include_bytes!("../assets/generated/east_hemisphere-2.jpg"),
-                include_bytes!("../assets/generated/east_hemisphere-3.jpg"),
+                include_bytes!("../assets/generated/tiles/east_hemisphere/0.jpg"),
+                include_bytes!("../assets/generated/tiles/east_hemisphere/1.jpg"),
+                include_bytes!("../assets/generated/tiles/east_hemisphere/2.jpg"),
+                include_bytes!("../assets/generated/tiles/east_hemisphere/3.jpg"),
             ],
         ),
     );
@@ -46,8 +46,8 @@ where
         create_world_texture(
             factory,
             &[
-                include_bytes!("../assets/generated/meridian0-0.jpg"),
-                include_bytes!("../assets/generated/meridian0-1.jpg"),
+                include_bytes!("../assets/generated/tiles/meridian0/0.jpg"),
+                include_bytes!("../assets/generated/tiles/meridian0/1.jpg"),
             ],
         ),
     );
@@ -56,8 +56,8 @@ where
         create_world_texture(
             factory,
             &[
-                include_bytes!("../assets/generated/meridian180-0.jpg"),
-                include_bytes!("../assets/generated/meridian180-1.jpg"),
+                include_bytes!("../assets/generated/tiles/meridian180/0.jpg"),
+                include_bytes!("../assets/generated/tiles/meridian180/1.jpg"),
             ],
         ),
     );

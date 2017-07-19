@@ -15,7 +15,7 @@ pub fn get_vertices() -> HashMap<TileKind, Vec<Vertex>> {
     result.insert(
         TileKind::WestHemisphere,
         get_vertices_for_tile(
-            include_bytes!("../assets/generated/west_hemisphere_elevation.bin"),
+            include_bytes!("../assets/generated/tiles/west_hemisphere/elevation.bin"),
             VERTEX_GRID_SIDE_LENGTH,
             VERTEX_GRID_SIDE_LENGTH,
         ),
@@ -23,7 +23,7 @@ pub fn get_vertices() -> HashMap<TileKind, Vec<Vertex>> {
     result.insert(
         TileKind::EastHemisphere,
         get_vertices_for_tile(
-            include_bytes!("../assets/generated/east_hemisphere_elevation.bin"),
+            include_bytes!("../assets/generated/tiles/east_hemisphere/elevation.bin"),
             VERTEX_GRID_SIDE_LENGTH,
             VERTEX_GRID_SIDE_LENGTH,
         ),
@@ -31,7 +31,7 @@ pub fn get_vertices() -> HashMap<TileKind, Vec<Vertex>> {
     result.insert(
         TileKind::Meridian0,
         get_vertices_for_tile(
-            include_bytes!("../assets/generated/meridian0_elevation.bin"),
+            include_bytes!("../assets/generated/tiles/meridian0/elevation.bin"),
             2,
             VERTEX_GRID_SIDE_LENGTH,
         ),
@@ -39,7 +39,7 @@ pub fn get_vertices() -> HashMap<TileKind, Vec<Vertex>> {
     result.insert(
         TileKind::Meridian180,
         get_vertices_for_tile(
-            include_bytes!("../assets/generated/meridian180_elevation.bin"),
+            include_bytes!("../assets/generated/tiles/meridian180/elevation.bin"),
             2,
             VERTEX_GRID_SIDE_LENGTH,
         ),

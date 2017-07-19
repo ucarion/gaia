@@ -3,127 +3,157 @@
 bold=$(tput bold)
 normal=$(tput sgr0)
 
-echo "${bold}Generating world image from NASA Blue Marble data ...${normal}"
+log() {
+    echo "${bold}${1}${normal}"
+}
 
-# To generate the textures, crop the world image into two halves, and resize
-# each half for each level of detail.
-#
-# TODO
-#
-# This texture approach has weird effects at longitudes 0 and 90, where the
-# tiles meet. I'm not sure how to make these images seamless.
+blue_marble_prefix="assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x21600"
 
-# convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-#     -gravity west -crop 10800x10800+0+0 \
-#     assets/generated/west_hemisphere-0.jpg
+mkdir -p assets/generated/tiles
 
-# convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-#     -gravity east -crop 10800x10800+0+0 \
-#     assets/generated/east_hemisphere-0.jpg
+if [ ! -f assets/generated/world_elevation.bin ]; then
+    log "Generating complete world elevation for later tiles ..."
 
-convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-    -crop 2x10800+10799+0 \
-    assets/generated/meridian0-0.jpg
+    convert -monitor -depth 16 \
+        \( -monitor -size 10800x4800 \
+            gray:assets/noaa_globe/a10g \
+            gray:assets/noaa_globe/b10g \
+            gray:assets/noaa_globe/c10g \
+            gray:assets/noaa_globe/d10g \
+            -evaluate addmodulus 500 -resize 1024 +append \
+        \) \
+        \( -monitor -size 10800x6000 \
+            gray:assets/noaa_globe/e10g \
+            gray:assets/noaa_globe/f10g \
+            gray:assets/noaa_globe/g10g \
+            gray:assets/noaa_globe/h10g \
+            -evaluate addmodulus 500 -resize 1024 +append \
+        \) \
+        \( -monitor -size 10800x6000 \
+            gray:assets/noaa_globe/i10g \
+            gray:assets/noaa_globe/j10g \
+            gray:assets/noaa_globe/k10g \
+            gray:assets/noaa_globe/l10g \
+            -evaluate addmodulus 500 -resize 1024 +append \
+        \) \
+        \( -monitor -size 10800x4800 \
+            gray:assets/noaa_globe/m10g \
+            gray:assets/noaa_globe/n10g \
+            gray:assets/noaa_globe/o10g \
+            gray:assets/noaa_globe/p10g \
+            -evaluate addmodulus 500 -resize 1024 +append \
+        \) \
+        -append \
+        -resize 4096x2048 \
+        gray:assets/generated/world_elevation.bin
+fi
 
-convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-    -write mpr:world +delete \
-    \( mpr:world -crop 1x10800+21599+0 \) \
-    \( mpr:world -crop 1x10800+0+0 \) \
-    +append \
-    assets/generated/meridian180-0.jpg
+if [ ! -d assets/generated/tiles/west_hemisphere ]; then
+    mkdir assets/generated/tiles/west_hemisphere
 
-# convert -monitor assets/generated/west_hemisphere-0.jpg \
-#     \( +clone -resize 1350 -write assets/generated/west_hemisphere-3.jpg +delete \) \
-#     \( +clone -resize 2700 -write assets/generated/west_hemisphere-2.jpg +delete \) \
-#     \( +clone -resize 5400 -write assets/generated/west_hemisphere-1.jpg +delete \) \
+    log "Generating textures for west_hemisphere"
+    convert \
+        \( \
+            -monitor \
+            "${blue_marble_prefix}.A1.jpg" -resize 5400 \
+            "${blue_marble_prefix}.B1.jpg" -resize 5400 \
+            +append \
+        \) \
+        \( \
+            -monitor \
+            "${blue_marble_prefix}.A2.jpg" -resize 5400 \
+            "${blue_marble_prefix}.B2.jpg" -resize 5400 \
+            +append \
+        \) \
+        -append \
+        assets/generated/tiles/west_hemisphere/0.jpg
 
-# convert -monitor assets/generated/east_hemisphere-0.jpg \
-#     \( +clone -resize 1350 -write assets/generated/east_hemisphere-3.jpg +delete \) \
-#     \( +clone -resize 2700 -write assets/generated/east_hemisphere-2.jpg +delete \) \
-#     \( +clone -resize 5400 -write assets/generated/east_hemisphere-1.jpg +delete \) \
+    convert -monitor assets/generated/tiles/west_hemisphere/0.jpg \
+        \( +clone -resize 50% -write assets/generated/tiles/west_hemisphere/1.jpg +delete \) \
+        \( +clone -resize 25% -write assets/generated/tiles/west_hemisphere/2.jpg +delete \) \
+        -resize 12.5% assets/generated/tiles/west_hemisphere/3.jpg
 
-convert -monitor assets/generated/meridian0-0.jpg \
-    -resize 1 assets/generated/meridian0-1.jpg
+    log "Generating elevation for west_hemisphere"
+    convert -monitor \
+        -depth 16 -size 4096x2048 gray:assets/generated/world_elevation.bin \
+        -crop 2048x2048+0+0 \
+        gray:assets/generated/tiles/west_hemisphere/elevation.bin
+fi
 
-convert -monitor assets/generated/meridian180-0.jpg \
-    -resize 1 assets/generated/meridian180-1.jpg
+if [ ! -d assets/generated/tiles/east_hemisphere ]; then
+    mkdir assets/generated/tiles/east_hemisphere
 
-echo "${bold}Generating elevation data from NOAA GLOBE data ...${normal}"
+    log "Generating textures for east_hemisphere"
+    convert \
+        \( \
+            -monitor \
+            "${blue_marble_prefix}.C1.jpg" -resize 5400 \
+            "${blue_marble_prefix}.D1.jpg" -resize 5400 \
+            +append \
+        \) \
+        \( \
+            -monitor \
+            "${blue_marble_prefix}.C2.jpg" -resize 5400 \
+            "${blue_marble_prefix}.D2.jpg" -resize 5400 \
+            +append \
+        \) \
+        -append \
+        assets/generated/tiles/east_hemisphere/0.jpg
 
-# To generate the heightmap, collect all the NOAA GLOBE tiles into a single
-# image. To generate the west hemisphere, crop out the left 2049x2049. To
-# generate the east hemisphere, crop out the right 2048x2049 and concatenate it
-# with the left 1x2049 column. The result is that the two halves overlap at
-# their edges, making the result seamless.
-#
-# Using imagemagick to work with these grids is a bit of a hack. GLOBE data have
-# some negative values where land is below sea level, and mark open seas as
-# -500m. To work around this, the data are increased by 500 before processing.
-# This offset should agree with the value of `ELEVATION_DATA_OFFSET` in
-# `constants.rs`.
-#
-# The width of each hemisphere's elevation grid should agree with the value of
-# `VERTEX_GRID_SIDE_LENGTH` in `constants.rs`.
+    convert -monitor assets/generated/tiles/east_hemisphere/0.jpg \
+        \( +clone -resize 50% -write assets/generated/tiles/east_hemisphere/1.jpg +delete \) \
+        \( +clone -resize 25% -write assets/generated/tiles/east_hemisphere/2.jpg +delete \) \
+        -resize 12.5% assets/generated/tiles/east_hemisphere/3.jpg
 
-# convert -monitor -depth 16 \
-#     \( -monitor -size 10800x4800 \
-#         gray:assets/noaa_globe/a10g \
-#         gray:assets/noaa_globe/b10g \
-#         gray:assets/noaa_globe/c10g \
-#         gray:assets/noaa_globe/d10g \
-#         -evaluate addmodulus 500 -resize 1024 +append \
-#     \) \
-#     \( -monitor -size 10800x6000 \
-#         gray:assets/noaa_globe/e10g \
-#         gray:assets/noaa_globe/f10g \
-#         gray:assets/noaa_globe/g10g \
-#         gray:assets/noaa_globe/h10g \
-#         -evaluate addmodulus 500 -resize 1024 +append \
-#     \) \
-#     \( -monitor -size 10800x6000 \
-#         gray:assets/noaa_globe/i10g \
-#         gray:assets/noaa_globe/j10g \
-#         gray:assets/noaa_globe/k10g \
-#         gray:assets/noaa_globe/l10g \
-#         -evaluate addmodulus 500 -resize 1024 +append \
-#     \) \
-#     \( -monitor -size 10800x4800 \
-#         gray:assets/noaa_globe/m10g \
-#         gray:assets/noaa_globe/n10g \
-#         gray:assets/noaa_globe/o10g \
-#         gray:assets/noaa_globe/p10g \
-#         -evaluate addmodulus 500 -resize 1024 +append \
-#     \) \
-#     -append \
-#     -resize 4096x2048 \
-#     gray:assets/generated/globe_elevation.bin
+    log "Generating elevation for east_hemisphere"
+    convert -monitor \
+        -depth 16 -size 4096x2048 gray:assets/generated/world_elevation.bin \
+        -crop 2048x2048+2048+0 \
+        gray:assets/generated/tiles/east_hemisphere/elevation.bin
+fi
 
-# convert -monitor -depth 16 -size 4096x2048 gray:assets/generated/globe_elevation.bin \
-#     -gravity west -crop 2048x2048+0+0 \
-#     gray:assets/generated/west_hemisphere_elevation.bin
+if [ ! -d assets/generated/tiles/meridian0 ]; then
+    mkdir assets/generated/tiles/meridian0
 
-# convert -monitor -depth 16 -size 4096x2048 gray:assets/generated/globe_elevation.bin \
-#     -gravity east -crop 2048x2048+0+0 \
-#     gray:assets/generated/east_hemisphere_elevation.bin
+    log "Generating textures for meridian0"
+    convert -monitor \
+        \( assets/generated/tiles/west_hemisphere/0.jpg -crop 1x10800+10799+0 \) \
+        \( assets/generated/tiles/east_hemisphere/0.jpg -crop 1x10800+0+0 \) \
+        +append \
+        assets/generated/tiles/meridian0/0.jpg
 
-# convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-#     -crop 2x10800+10799+0 \
-#     assets/generated/meridian0-0.jpg
+    convert -monitor assets/generated/tiles/meridian0/0.jpg \
+        -resize 1 \
+        assets/generated/tiles/meridian0/1.jpg
 
-# convert -monitor assets/nasa_blue_marble/world.topo.bathy.200412.3x21600x10800.jpg \
-#     -write mpr:world +delete \
-#     \( mpr:world -crop 1x10800+21599+0 \) \
-#     \( mpr:world -crop 1x10800+0+0 \) \
-#     +append \
-#     assets/generated/meridian180-0.jpg
+    log "Generating elevation for meridian0"
+    convert -monitor \
+        -depth 16 -size 2048x2048 \
+        \( gray:assets/generated/tiles/west_hemisphere/elevation.bin -crop 1x2048+2047+0 \) \
+        \( gray:assets/generated/tiles/east_hemisphere/elevation.bin -crop 1x2048+0+0 \) \
+        +append \
+        assets/generated/tiles/meridian0/elevation.bin
+fi
 
-convert -monitor -depth 16 -size 4096x2048 gray:assets/generated/globe_elevation.bin \
-    -crop 2x2048+2047+0 \
-    gray:assets/generated/meridian0_elevation.bin
+if [ ! -d assets/generated/tiles/meridian180 ]; then
+    mkdir assets/generated/tiles/meridian180
 
-convert -monitor -depth 16 -size 4096x2048 gray:assets/generated/globe_elevation.bin \
-    -write mpr:world +delete \
-    \( mpr:world -crop 1x2048+4095+0 \) \
-    \( mpr:world -crop 1x2048+0+0 \) \
-    +append \
-    gray:assets/generated/meridian180_elevation.bin
+    log "Generating textures for meridian180"
+    convert -monitor \
+        \( assets/generated/tiles/east_hemisphere/0.jpg -crop 1x10800+10799+0 \) \
+        \( assets/generated/tiles/west_hemisphere/0.jpg -crop 1x10800+0+0 \) \
+        +append \
+        assets/generated/tiles/meridian180/0.jpg
+
+    convert -monitor assets/generated/tiles/meridian180/0.jpg \
+        -resize 1 \
+        assets/generated/tiles/meridian180/1.jpg
+
+    log "Generating elevation for meridian180"
+    convert -monitor \
+        -depth 16 -size 2048x2048 \
+        \( gray:assets/generated/tiles/east_hemisphere/elevation.bin -crop 1x2048+2047+0 \) \
+        \( gray:assets/generated/tiles/west_hemisphere/elevation.bin -crop 1x2048+0+0 \) \
+        +append \
+        assets/generated/tiles/meridian180/elevation.bin
+fi
