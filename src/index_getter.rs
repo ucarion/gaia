@@ -1,6 +1,6 @@
 use collision::{Aabb3, Frustum, Relation};
 
-use constants::VERTEX_GRID_SIDE_LENGTH;
+use constants::{ELEVATION_GRID_HEIGHT, ELEVATION_GRID_WIDTH};
 use tile::{TileRenderInfo, TileKind};
 
 /// The greatest possible `z` value any vertex may have.
@@ -25,10 +25,10 @@ pub fn get_indices_and_offsets(
         _ => 4,
     };
 
-    let middle_tile_index = (camera_x / VERTEX_GRID_SIDE_LENGTH as f32).floor() as i64;
+    let middle_tile_index = (camera_x / ELEVATION_GRID_WIDTH as f32).floor() as i64;
     let middle_is_west = middle_tile_index % 2 == 0;
 
-    let offset_per_index = VERTEX_GRID_SIDE_LENGTH as f32 - 1.0;
+    let offset_per_index = ELEVATION_GRID_WIDTH as f32 - 1.0;
     let left_offset = (middle_tile_index - 1) as f32 * offset_per_index;
     let middle_offset = middle_tile_index as f32 * offset_per_index;
     let right_offset = (middle_tile_index + 1) as f32 * offset_per_index;
@@ -41,7 +41,6 @@ pub fn get_indices_and_offsets(
                 TileKind::WestHemisphere
             },
             left_offset,
-            VERTEX_GRID_SIDE_LENGTH,
         ),
         (
             if middle_is_west {
@@ -50,7 +49,6 @@ pub fn get_indices_and_offsets(
                 TileKind::EastHemisphere
             },
             middle_offset,
-            VERTEX_GRID_SIDE_LENGTH,
         ),
         (
             if middle_is_west {
@@ -59,14 +57,13 @@ pub fn get_indices_and_offsets(
                 TileKind::WestHemisphere
             },
             right_offset,
-            VERTEX_GRID_SIDE_LENGTH,
         ),
     ];
 
     tiles
         .into_iter()
-        .map(|(kind, x_offset, grid_width)| {
-            get_tile_index_and_offset(&frustum, max_depth, kind, x_offset, grid_width)
+        .map(|(kind, x_offset)| {
+            get_tile_index_and_offset(&frustum, max_depth, kind, x_offset)
         })
         .collect()
 }
@@ -76,10 +73,9 @@ fn get_tile_index_and_offset(
     max_depth: usize,
     kind: TileKind,
     x_offset: f32,
-    grid_width: u32,
 ) -> TileRenderInfo {
     let top_left = [x_offset, 0.0];
-    let indices = get_indices(frustum, max_depth, top_left, grid_width);
+    let indices = get_indices(frustum, max_depth, top_left);
 
     TileRenderInfo {
         indices: indices,
@@ -88,13 +84,9 @@ fn get_tile_index_and_offset(
     }
 }
 
-fn get_indices(
-    frustum: &Frustum<f32>,
-    max_depth: usize,
-    top_left: [f32; 2],
-    grid_width: u32,
-) -> Vec<u32> {
-    let full_rectangle = Rectangle::full_rectangle(top_left, grid_width, VERTEX_GRID_SIDE_LENGTH);
+fn get_indices(frustum: &Frustum<f32>, max_depth: usize, top_left: [f32; 2]) -> Vec<u32> {
+    let full_rectangle =
+        Rectangle::full_rectangle(top_left, ELEVATION_GRID_WIDTH, ELEVATION_GRID_HEIGHT);
 
     let mut result = Vec::new();
     append_indices(&mut result, frustum, max_depth, 0, &full_rectangle, true);
