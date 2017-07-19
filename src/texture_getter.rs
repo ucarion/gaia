@@ -41,26 +41,6 @@ where
             ],
         ),
     );
-    textures_by_kind.insert(
-        TileKind::Meridian0,
-        create_world_texture(
-            factory,
-            &[
-                include_bytes!("../assets/generated/tiles/meridian0/0.jpg"),
-                include_bytes!("../assets/generated/tiles/meridian0/1.jpg"),
-            ],
-        ),
-    );
-    textures_by_kind.insert(
-        TileKind::Meridian180,
-        create_world_texture(
-            factory,
-            &[
-                include_bytes!("../assets/generated/tiles/meridian180/0.jpg"),
-                include_bytes!("../assets/generated/tiles/meridian180/1.jpg"),
-            ],
-        ),
-    );
 
     let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
         gfx::texture::FilterMethod::Bilinear,

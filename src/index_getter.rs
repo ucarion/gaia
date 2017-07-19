@@ -28,9 +28,10 @@ pub fn get_indices_and_offsets(
     let middle_tile_index = (camera_x / VERTEX_GRID_SIDE_LENGTH as f32).floor() as i64;
     let middle_is_west = middle_tile_index % 2 == 0;
 
-    let left_offset = (middle_tile_index - 1) as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
-    let middle_offset = middle_tile_index as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
-    let right_offset = (middle_tile_index + 1) as f32 * VERTEX_GRID_SIDE_LENGTH as f32;
+    let offset_per_index = VERTEX_GRID_SIDE_LENGTH as f32 - 1.0;
+    let left_offset = (middle_tile_index - 1) as f32 * offset_per_index;
+    let middle_offset = middle_tile_index as f32 * offset_per_index;
+    let right_offset = (middle_tile_index + 1) as f32 * offset_per_index;
 
     let tiles = vec![
         (
@@ -44,30 +45,12 @@ pub fn get_indices_and_offsets(
         ),
         (
             if middle_is_west {
-                TileKind::Meridian180
-            } else {
-                TileKind::Meridian0
-            },
-            middle_offset - 1.0,
-            2,
-        ),
-        (
-            if middle_is_west {
                 TileKind::WestHemisphere
             } else {
                 TileKind::EastHemisphere
             },
             middle_offset,
             VERTEX_GRID_SIDE_LENGTH,
-        ),
-        (
-            if middle_is_west {
-                TileKind::Meridian0
-            } else {
-                TileKind::Meridian180
-            },
-            right_offset - 1.0,
-            2,
         ),
         (
             if middle_is_west {

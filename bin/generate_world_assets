@@ -76,7 +76,7 @@ if [ ! -d assets/generated/tiles/west_hemisphere ]; then
     log "Generating elevation for west_hemisphere"
     convert -monitor \
         -depth 16 -size 4096x2048 gray:assets/generated/world_elevation.bin \
-        -crop 2048x2048+0+0 \
+        -crop 2049x2048+0+0 \
         gray:assets/generated/tiles/west_hemisphere/elevation.bin
 fi
 
@@ -107,53 +107,9 @@ if [ ! -d assets/generated/tiles/east_hemisphere ]; then
 
     log "Generating elevation for east_hemisphere"
     convert -monitor \
-        -depth 16 -size 4096x2048 gray:assets/generated/world_elevation.bin \
-        -crop 2048x2048+2048+0 \
+        -depth 16 -size 4096x2048 \
+        \( gray:assets/generated/world_elevation.bin -crop 2048x2048+2048+0 \) \
+        \( gray:assets/generated/world_elevation.bin -crop 1x2048+0+0 \) \
+        +append \
         gray:assets/generated/tiles/east_hemisphere/elevation.bin
-fi
-
-if [ ! -d assets/generated/tiles/meridian0 ]; then
-    mkdir assets/generated/tiles/meridian0
-
-    log "Generating textures for meridian0"
-    convert -monitor \
-        \( assets/generated/tiles/west_hemisphere/0.jpg -crop 1x10800+10799+0 \) \
-        \( assets/generated/tiles/east_hemisphere/0.jpg -crop 1x10800+0+0 \) \
-        +append \
-        assets/generated/tiles/meridian0/0.jpg
-
-    convert -monitor assets/generated/tiles/meridian0/0.jpg \
-        -resize 1 \
-        assets/generated/tiles/meridian0/1.jpg
-
-    log "Generating elevation for meridian0"
-    convert -monitor \
-        -depth 16 -size 2048x2048 \
-        \( gray:assets/generated/tiles/west_hemisphere/elevation.bin -crop 1x2048+2047+0 \) \
-        \( gray:assets/generated/tiles/east_hemisphere/elevation.bin -crop 1x2048+0+0 \) \
-        +append \
-        assets/generated/tiles/meridian0/elevation.bin
-fi
-
-if [ ! -d assets/generated/tiles/meridian180 ]; then
-    mkdir assets/generated/tiles/meridian180
-
-    log "Generating textures for meridian180"
-    convert -monitor \
-        \( assets/generated/tiles/east_hemisphere/0.jpg -crop 1x10800+10799+0 \) \
-        \( assets/generated/tiles/west_hemisphere/0.jpg -crop 1x10800+0+0 \) \
-        +append \
-        assets/generated/tiles/meridian180/0.jpg
-
-    convert -monitor assets/generated/tiles/meridian180/0.jpg \
-        -resize 1 \
-        assets/generated/tiles/meridian180/1.jpg
-
-    log "Generating elevation for meridian180"
-    convert -monitor \
-        -depth 16 -size 2048x2048 \
-        \( gray:assets/generated/tiles/east_hemisphere/elevation.bin -crop 1x2048+2047+0 \) \
-        \( gray:assets/generated/tiles/west_hemisphere/elevation.bin -crop 1x2048+0+0 \) \
-        +append \
-        assets/generated/tiles/meridian180/elevation.bin
 fi

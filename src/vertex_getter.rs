@@ -28,22 +28,6 @@ pub fn get_vertices() -> HashMap<TileKind, Vec<Vertex>> {
             VERTEX_GRID_SIDE_LENGTH,
         ),
     );
-    result.insert(
-        TileKind::Meridian0,
-        get_vertices_for_tile(
-            include_bytes!("../assets/generated/tiles/meridian0/elevation.bin"),
-            2,
-            VERTEX_GRID_SIDE_LENGTH,
-        ),
-    );
-    result.insert(
-        TileKind::Meridian180,
-        get_vertices_for_tile(
-            include_bytes!("../assets/generated/tiles/meridian180/elevation.bin"),
-            2,
-            VERTEX_GRID_SIDE_LENGTH,
-        ),
-    );
     result
 }
 

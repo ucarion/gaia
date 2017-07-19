@@ -9,6 +9,4 @@ pub struct TileRenderInfo {
 pub enum TileKind {
     WestHemisphere,
     EastHemisphere,
-    Meridian0,
-    Meridian180,
 }
