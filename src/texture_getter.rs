@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use tile::TileKind;
+use tile::{TileKind, TILE_KINDS};
 
 use image::{self, GenericImage};
 use gfx;
@@ -17,30 +17,12 @@ where
 {
     let mut textures_by_kind = HashMap::new();
 
-    textures_by_kind.insert(
-        TileKind::WestHemisphere,
-        create_world_texture(
-            factory,
-            &[
-                include_bytes!("../assets/generated/tiles/west_hemisphere/0.jpg"),
-                include_bytes!("../assets/generated/tiles/west_hemisphere/1.jpg"),
-                include_bytes!("../assets/generated/tiles/west_hemisphere/2.jpg"),
-                include_bytes!("../assets/generated/tiles/west_hemisphere/3.jpg"),
-            ],
-        ),
-    );
-    textures_by_kind.insert(
-        TileKind::EastHemisphere,
-        create_world_texture(
-            factory,
-            &[
-                include_bytes!("../assets/generated/tiles/east_hemisphere/0.jpg"),
-                include_bytes!("../assets/generated/tiles/east_hemisphere/1.jpg"),
-                include_bytes!("../assets/generated/tiles/east_hemisphere/2.jpg"),
-                include_bytes!("../assets/generated/tiles/east_hemisphere/3.jpg"),
-            ],
-        ),
-    );
+    for tile_kind in TILE_KINDS.iter() {
+        textures_by_kind.insert(
+            tile_kind.clone(),
+            create_world_texture(factory, &tile_kind.texture_data()),
+        );
+    }
 
     let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
         gfx::texture::FilterMethod::Bilinear,
@@ -53,13 +35,13 @@ where
 
 fn create_world_texture<F, R>(
     factory: &mut F,
-    image_data: &[&[u8]],
+    texture_data: &[&[u8]],
 ) -> gfx::handle::ShaderResourceView<R, [f32; 4]>
 where
     R: gfx::Resources,
     F: gfx::Factory<R>,
 {
-    let images: Vec<_> = image_data
+    let images: Vec<_> = texture_data
         .iter()
         .map(|data| image::load_from_memory(data).unwrap())
         .collect();

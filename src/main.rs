@@ -33,7 +33,7 @@ use piston_window::*;
 gfx_pipeline!( pipe {
     vbuf: gfx::VertexBuffer<vertex::Vertex> = (),
     u_model_view_proj: gfx::Global<[[f32; 4]; 4]> = "u_model_view_proj",
-    u_offset_x: gfx::Global<f32> = "u_offset_x",
+    u_offset: gfx::Global<[f32; 2]> = "u_offset",
     t_color: gfx::TextureSampler<[f32; 4]> = "t_color",
     out_color: gfx::RenderTarget<::gfx::format::Srgba8> = "o_Color",
     out_depth: gfx::DepthTarget<::gfx::format::DepthStencil> =
@@ -94,10 +94,10 @@ fn main() {
     println!("Done. Took: {}ms", (end - begin).num_milliseconds());
 
     let mut data = pipe::Data {
-        vbuf: vertex_buffers_by_kind[&TileKind::WestHemisphere].clone(),
+        vbuf: vertex_buffers_by_kind[&TileKind::A1].clone(),
         u_model_view_proj: [[0.0; 4]; 4],
-        u_offset_x: 0.0,
-        t_color: (textures_by_kind[&TileKind::WestHemisphere].clone(), sampler),
+        u_offset: [0.0, 0.0],
+        t_color: (textures_by_kind[&TileKind::A1].clone(), sampler),
         out_color: window.output_color.clone(),
         out_depth: window.output_stencil.clone(),
     };
@@ -140,7 +140,7 @@ fn main() {
                 };
 
                 data.vbuf = vertex_buffers_by_kind[&tile_info.kind].clone();
-                data.u_offset_x = tile_info.x_offset;
+                data.u_offset = tile_info.offset;
                 data.t_color.0 = textures_by_kind[&tile_info.kind].clone();
                 window.encoder.draw(&slice, &pso, &data);
             }

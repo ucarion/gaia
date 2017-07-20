@@ -110,6 +110,11 @@ generate_tile_texture() {
             +append \
             "assets/generated/tiles/${1}/0.jpg"
     fi
+
+    # once tile is generated, scale it to be a `2^n`-sized square for mipmapping
+    convert -monitor "assets/generated/tiles/${1}/0.jpg" \
+        -resize 8192x8192! \
+        "assets/generated/tiles/${1}/0.jpg"
 }
 
 generate_tile_mipmaps() {

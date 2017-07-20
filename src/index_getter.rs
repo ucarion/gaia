@@ -1,6 +1,6 @@
 use collision::{Aabb3, Frustum, Relation};
 
-use constants::{ELEVATION_GRID_HEIGHT, ELEVATION_GRID_WIDTH};
+use constants::ELEVATION_GRID_WIDTH;
 use tile::{TileRenderInfo, TileKind};
 
 /// The greatest possible `z` value any vertex may have.
@@ -20,73 +20,83 @@ pub fn get_indices_and_offsets(
         0.0...300.0 => 9,
         300.0...500.0 => 8,
         500.0...650.0 => 7,
-        650.0...1200.0 => 6,
-        1200.0...2000.0 => 5,
-        _ => 4,
+        650.0...1000.0 => 6,
+        1000.0...1200.0 => 5,
+        1200.0...1500.0 => 4,
+        _ => 3,
     };
 
+    // render middle tile, as well as two to the left and right
     let middle_tile_index = (camera_x / ELEVATION_GRID_WIDTH as f32).floor() as i64;
-    let middle_is_west = middle_tile_index % 2 == 0;
-
-    let offset_per_index = ELEVATION_GRID_WIDTH as f32 - 1.0;
-    let left_offset = (middle_tile_index - 1) as f32 * offset_per_index;
-    let middle_offset = middle_tile_index as f32 * offset_per_index;
-    let right_offset = (middle_tile_index + 1) as f32 * offset_per_index;
-
-    let tiles = vec![
-        (
-            if middle_is_west {
-                TileKind::EastHemisphere
-            } else {
-                TileKind::WestHemisphere
-            },
-            left_offset,
-        ),
-        (
-            if middle_is_west {
-                TileKind::WestHemisphere
-            } else {
-                TileKind::EastHemisphere
-            },
-            middle_offset,
-        ),
-        (
-            if middle_is_west {
-                TileKind::EastHemisphere
-            } else {
-                TileKind::WestHemisphere
-            },
-            right_offset,
-        ),
+    let tile_indices = [
+        middle_tile_index - 2,
+        middle_tile_index - 1,
+        middle_tile_index,
+        middle_tile_index + 1,
+        middle_tile_index + 2,
     ];
 
-    tiles
-        .into_iter()
-        .map(|(kind, x_offset)| {
-            get_tile_index_and_offset(&frustum, max_depth, kind, x_offset)
+    tile_indices
+        .iter()
+        .flat_map(|&tile_index| {
+            tile_pair_kind_and_offset_from_index(tile_index)
+        })
+        .map(|(kind, offset)| {
+            get_tile_render_info(&frustum, max_depth, kind.clone(), offset)
         })
         .collect()
 }
 
-fn get_tile_index_and_offset(
+fn modulo(a: i64, b: i64) -> i64 {
+    let rem = a % b;
+    if rem < 0 {
+        rem + b
+    } else {
+        rem
+    }
+}
+
+fn tile_pair_kind_and_offset_from_index(tile_index: i64) -> Vec<(TileKind, [f32; 2])> {
+    let (kind1, kind2) = match modulo(tile_index, 4) {
+        0 => (TileKind::A1, TileKind::A2),
+        1 => (TileKind::B1, TileKind::B2),
+        2 => (TileKind::C1, TileKind::C2),
+        3 => (TileKind::D1, TileKind::D2),
+        _ => unreachable!(),
+    };
+
+    let offset_per_index = ELEVATION_GRID_WIDTH as f32 - 1.0;
+    let x_offset = offset_per_index * tile_index as f32;
+    let y_offset = kind1.elevation_grid_height() as f32 - 1.0;
+
+    vec![
+        (kind1, [x_offset, 0.0]),
+        (kind2, [x_offset, -y_offset]),
+    ]
+}
+
+fn get_tile_render_info(
     frustum: &Frustum<f32>,
     max_depth: usize,
     kind: TileKind,
-    x_offset: f32,
+    offset: [f32; 2],
 ) -> TileRenderInfo {
-    let top_left = [x_offset, 0.0];
-    let indices = get_indices(frustum, max_depth, top_left);
+    let indices = get_indices(kind.elevation_grid_height(), frustum, max_depth, offset);
 
     TileRenderInfo {
         indices: indices,
-        x_offset: x_offset,
+        offset: offset,
         kind: kind,
     }
 }
 
-fn get_indices(frustum: &Frustum<f32>, max_depth: usize, top_left: [f32; 2]) -> Vec<u32> {
-    let full_rectangle =
-        Rectangle::full_rectangle(top_left, ELEVATION_GRID_WIDTH, ELEVATION_GRID_HEIGHT);
+fn get_indices(
+    grid_height: u32,
+    frustum: &Frustum<f32>,
+    max_depth: usize,
+    top_left: [f32; 2],
+) -> Vec<u32> {
+    let full_rectangle = Rectangle::full_rectangle(top_left, ELEVATION_GRID_WIDTH, grid_height);
 
     let mut result = Vec::new();
     append_indices(&mut result, frustum, max_depth, 0, &full_rectangle, true);
