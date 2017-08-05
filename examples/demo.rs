@@ -43,6 +43,14 @@ fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
     }.projection()
 }
 
+fn get_mvp(window: &PistonWindow, camera_controller: &CameraController) -> [[f32; 4]; 4] {
+    cam::model_view_projection(
+        vecmath::mat4_id(),
+        camera_controller.view_matrix(),
+        get_projection(window),
+    )
+}
+
 fn main() {
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
@@ -50,16 +58,16 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut factory = window.factory.clone();
-
-    let mut gaia_renderer = gaia::Renderer::new(factory.clone());
-
     let mut camera_controller = CameraController::new();
+    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone());
 
     let mut fps_counter = FPSCounter::new();
     let mut fps = 0;
 
-    let mut glyphs = Glyphs::new("assets/fonts/FiraSans-Regular.ttf", factory.clone()).unwrap();
+    let mut glyphs = Glyphs::new("assets/fonts/FiraSans-Regular.ttf", window.factory.clone())
+        .unwrap();
+
+    gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
 
     while let Some(e) = window.next() {
         camera_controller.event(&e);
@@ -70,13 +78,7 @@ fn main() {
                 .clear(&window.output_color, [0.3, 0.3, 0.3, 1.0]);
             window.encoder.clear_depth(&window.output_stencil, 1.0);
 
-            let mvp = cam::model_view_projection(
-                vecmath::mat4_id(),
-                camera_controller.view_matrix(),
-                get_projection(window),
-            );
-
-            gaia_renderer.set_mvp(mvp);
+            gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
             gaia_renderer.draw(
                 &mut window.encoder,
                 window.output_color.clone(),
@@ -87,8 +89,7 @@ fn main() {
         });
 
         window.draw_2d(&e, |context, graphics| {
-            // let camera_height = camera_controller.camera_position()[2];
-            let camera_height = 1337.0;
+            let camera_height = camera_controller.camera_position()[2];
             text::Text::new_color([0.0, 0.0, 0.0, 1.0], 10).draw(
                 &format!("FPS: {} - Camera height: {}", fps, camera_height),
                 &mut glyphs,
@@ -99,8 +100,7 @@ fn main() {
         });
 
         e.resize(|_, _| {
-            // data.out_color = window.output_color.clone();
-            // data.out_depth = window.output_stencil.clone();
+            gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
         });
     }
 }
