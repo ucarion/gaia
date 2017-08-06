@@ -6,26 +6,9 @@ extern crate piston;
 extern crate piston_window;
 extern crate vecmath;
 
-// extern crate byteorder;
-// extern crate cam;
-// extern crate cgmath;
-// extern crate collision;
-// extern crate fps_counter;
-// extern crate image;
-// extern crate piston;
-// extern crate piston_window;
-// extern crate time;
-
 mod camera_controller;
-// mod constants;
-// mod index_getter;
-// mod texture_getter;
-// mod tile;
-// mod vertex;
-// mod vertex_getter;
 
 use camera_controller::CameraController;
-// use tile::TileKind;
 
 use cam::CameraPerspective;
 use fps_counter::FPSCounter;
