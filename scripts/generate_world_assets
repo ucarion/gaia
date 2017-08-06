@@ -92,6 +92,7 @@ letter_to_ascii() {
 }
 
 create_level0_elevation() {
+    # TODO this could be done in four, smaller crops instead of two
     log "Generating elevation crops from GLOBE tiles"
     convert -monitor -depth 16 \
         \( -monitor -size 10800x4800 \
@@ -191,7 +192,7 @@ create_tiles_for_level() {
         for y in $(seq 0 $last_tile_y); do
             local right_x=$((($x + 1) % $level_width))
             local below_y=$(($y + 1))
-            local gravity_below="north"
+            local gravity_below="northwest"
 
             if [[ $y = $last_tile_y ]]; then
                 # Last row is a special case; normally we crop the top of the
@@ -199,7 +200,7 @@ create_tiles_for_level() {
                 # crops the bottom of this below-tile. In effect, this
                 # duplicates the bottom of the tile.
                 below_y=$y
-                gravity_below="south"
+                gravity_below="southwest"
             fi
 
             local top_left="$crops_dir/${1}_${x}_${y}"
