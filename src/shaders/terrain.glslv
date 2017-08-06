@@ -14,7 +14,7 @@ void main() {
     v_tex_coord = a_coord;
 
     float x =  a_coord.x * u_width + u_offset.x;
-    float y = -a_coord.y * u_width + u_offset.y;
+    float y = -a_coord.y * u_width - u_offset.y;
 
     uint elevation = texture(t_elevation, a_coord).r;
     float z = float(elevation) / ELEVATION_SCALE_FACTOR;
