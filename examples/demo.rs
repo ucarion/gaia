@@ -12,6 +12,7 @@ use camera_controller::CameraController;
 
 use cam::CameraPerspective;
 use fps_counter::FPSCounter;
+use gfx::Device;
 use piston::window::WindowSettings;
 use piston_window::*;
 
@@ -35,20 +36,42 @@ fn get_mvp(window: &PistonWindow, camera_controller: &CameraController) -> [[f32
 }
 
 fn main() {
+    if let Err(ref e) = run() {
+        println!("error: {}", e);
+
+        for e in e.iter().skip(1) {
+            println!("caused by: {}", e);
+        }
+
+        if let Some(backtrace) = e.backtrace() {
+            println!("{:?}", backtrace);
+        }
+
+        std::process::exit(1);
+    }
+}
+
+fn run() -> gaia::Result<()> {
+    use gaia::errors::ResultExt;
+
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
         .opengl(OpenGL::V3_2)
         .build()
-        .unwrap();
+        .map_err(gaia::Error::from)
+        .chain_err(|| "Could not create window")?;
 
     let mut camera_controller = CameraController::new();
-    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone());
+    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone())
+        .chain_err(|| "Could not create renderer")?;
 
     let mut fps_counter = FPSCounter::new();
     let mut fps = 0;
 
+    // TODO get the actual error
     let mut glyphs = Glyphs::new("assets/fonts/FiraSans-Regular.ttf", window.factory.clone())
-        .unwrap();
+        .map_err(|_err| gaia::Error::from("glyph error"))
+        .chain_err(|| "Could not create glyphs")?;
 
     gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
 
@@ -68,6 +91,8 @@ fn main() {
                 window.output_stencil.clone(),
             );
 
+            window.device.cleanup();
+
             fps = fps_counter.tick();
         });
 
@@ -86,4 +111,6 @@ fn main() {
             gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
         });
     }
+
+    Ok(())
 }

@@ -5,14 +5,17 @@ use byteorder::{ReadBytesExt, LittleEndian};
 use gfx;
 use image::{self, GenericImage};
 
+use errors::*;
+
 pub fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     factory: &mut F,
     level: u8,
     x: u8,
     y: u8,
-) -> gfx::handle::ShaderResourceView<R, [f32; 4]> {
+) -> Result<gfx::handle::ShaderResourceView<R, [f32; 4]>> {
     let path = format!("assets/generated/tiles/{}_{}_{}.jpg", level, x, y);
-    let texture_image = image::open(path).unwrap();
+    let texture_image = image::open(path)
+        .chain_err(|| "Could not open tile image file")?;
 
     let (width, height) = texture_image.dimensions();
     let texture_kind =
@@ -22,9 +25,9 @@ pub fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
 
     let (_, texture_view) = factory
         .create_texture_immutable_u8::<gfx::format::Srgba8>(texture_kind, &[raw_data.as_slice()])
-        .unwrap();
+        .chain_err(|| "Could not create color texture")?;
 
-    texture_view
+    Ok(texture_view)
 }
 
 pub fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
@@ -32,13 +35,15 @@ pub fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     level: u8,
     x: u8,
     y: u8,
-) -> gfx::handle::ShaderResourceView<R, u32> {
+) -> Result<gfx::handle::ShaderResourceView<R, u32>> {
     let path = format!("assets/generated/tiles/{}_{}_{}.elevation", level, x, y);
-    let mut file = BufReader::new(File::open(path).unwrap());
+    let file = File::open(path)
+        .chain_err(|| "Could not tile elevation file")?;
+    let mut file = BufReader::new(file);
 
     let mut buf = Vec::new();
     while let Ok(data) = file.read_u16::<LittleEndian>() {
-        buf.push(data);
+        buf.push(data_to_elevation(data));
     }
 
     let texture_kind = gfx::texture::Kind::D2(128, 128, gfx::texture::AaMode::Single);
@@ -48,7 +53,15 @@ pub fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
             texture_kind,
             &[buf.as_slice()],
         )
-        .unwrap();
+        .chain_err(|| "Could not create elevation texture")?;
 
-    texture_view
+    Ok(texture_view)
+}
+
+fn data_to_elevation(data: u16) -> u16 {
+    if data <= 500 {
+        0
+    } else {
+        data - 500
+    }
 }

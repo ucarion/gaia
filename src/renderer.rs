@@ -1,3 +1,4 @@
+use errors::*;
 use texture_getter;
 
 use gfx;
@@ -14,6 +15,8 @@ gfx_pipeline!(pipe {
     t_color: gfx::TextureSampler<[f32; 4]> = "t_color",
     t_elevation: gfx::TextureSampler<u32> = "t_elevation",
     u_mvp: gfx::Global<[[f32; 4]; 4]> = "u_mvp",
+    u_offset: gfx::Global<[f32; 2]> = "u_offset",
+    u_width: gfx::Global<f32> = "u_width",
     vertex_buffer: gfx::VertexBuffer<Vertex> = (),
 });
 
@@ -29,9 +32,9 @@ pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
 }
 
 impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
-    pub fn new(mut factory: F) -> Renderer<R, F> {
-        let color_texture_view = texture_getter::get_color_texture(&mut factory, 6, 0, 0);
-        let elevation_texture_view = texture_getter::get_elevation_texture(&mut factory, 6, 0, 0);
+    pub fn new(mut factory: F) -> Result<Renderer<R, F>> {
+        let color_texture_view = texture_getter::get_color_texture(&mut factory, 6, 0, 0)?;
+        let elevation_texture_view = texture_getter::get_elevation_texture(&mut factory, 6, 0, 0)?;
 
         let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
             gfx::texture::FilterMethod::Bilinear,
@@ -44,7 +47,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
                 include_bytes!("shaders/terrain.glslf"),
                 pipe::new(),
             )
-            .unwrap();
+            .chain_err(|| "Could not create pipeline")?;
 
         let mut vertex_data = vec![];
         let mut index_data = vec![];
@@ -65,7 +68,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         let (vertex_buffer, vertex_slice) = factory
             .create_vertex_buffer_with_slice(&vertex_data, index_data.as_slice());
 
-        Renderer {
+        Ok(Renderer {
             factory: factory,
             mvp: None,
             pso: pso,
@@ -74,7 +77,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             elevation_texture: elevation_texture_view,
             vertex_buffer: vertex_buffer,
             vertex_slice: vertex_slice,
-        }
+        })
     }
 
     pub fn set_mvp(&mut self, mvp: [[f32; 4]; 4]) {
@@ -92,6 +95,8 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             o_depth: stencil,
             t_color: (self.color_texture.clone(), self.sampler.clone()),
             t_elevation: (self.elevation_texture.clone(), self.sampler.clone()),
+            u_offset: [0.0, 0.0],
+            u_width: 1000.0,
             u_mvp: self.mvp.unwrap(),
             vertex_buffer: self.vertex_buffer.clone(),
         };
