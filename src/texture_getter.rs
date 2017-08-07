@@ -7,9 +7,19 @@ use image::{self, GenericImage};
 
 use constants::ELEVATION_DATA_OFFSET;
 use errors::*;
-use tile::Tile;
+use tile::{Tile, TileTextures};
 
-pub fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
+pub fn get_textures<R: gfx::Resources, F: gfx::Factory<R>>(
+    factory: &mut F,
+    tile: &Tile,
+) -> Result<TileTextures<R>> {
+    Ok(TileTextures {
+        color: get_color_texture(factory, tile)?,
+        elevation: get_elevation_texture(factory, tile)?,
+    })
+}
+
+fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     factory: &mut F,
     tile: &Tile,
 ) -> Result<gfx::handle::ShaderResourceView<R, [f32; 4]>> {
@@ -35,7 +45,7 @@ pub fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     Ok(texture_view)
 }
 
-pub fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
+fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     factory: &mut F,
     tile: &Tile,
 ) -> Result<gfx::handle::ShaderResourceView<R, u32>> {

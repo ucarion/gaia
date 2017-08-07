@@ -78,46 +78,17 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         target: gfx::handle::RenderTargetView<R, gfx::format::Srgba8>,
         stencil: gfx::handle::DepthStencilView<R, gfx::format::DepthStencil>,
     ) -> Result<()> {
-        let mut index_data = vec![];
-        for x in 0..128u16 {
-            for y in 0..128u16 {
-                if x != 127 && y != 127 {
-                    let index = (x + 0) + (y + 0) * 128;
-                    let right = (x + 1) + (y + 0) * 128;
-                    let below = (x + 0) + (y + 1) * 128;
-                    let below_right = (x + 1) + (y + 1) * 128;
-                    index_data.extend_from_slice(&[index, below, right, right, below, below_right]);
-                }
-            }
-        }
+        let (tiles_to_render, tiles_to_fetch) =
+            tile_getter::get_tiles(self.camera_position.unwrap(), &mut self.texture_cache);
 
-        let slice = gfx::Slice {
-            start: 0,
-            end: index_data.len() as u32,
-            base_vertex: 0,
-            instances: None,
-            buffer: self.factory.create_index_buffer(index_data.as_slice()),
-        };
-
-        let positioned_tiles = tile_getter::desired_tiles(self.camera_position.unwrap());
-
-        for positioned_tile in positioned_tiles {
-            if !self.texture_cache.contains_key(&positioned_tile.tile) {
-                let color_texture =
-                    texture_getter::get_color_texture(&mut self.factory, &positioned_tile.tile)?;
-                let elevation_texture = texture_getter::get_elevation_texture(
-                    &mut self.factory,
-                    &positioned_tile.tile,
-                )?;
-
-                self.texture_cache.insert(
-                    positioned_tile.tile.clone(),
-                    TileTextures {
-                        color: color_texture,
-                        elevation: elevation_texture,
-                    },
-                );
-            }
+        for (positioned_tile, index_data) in tiles_to_render {
+            let slice = gfx::Slice {
+                start: 0,
+                end: index_data.len() as u32,
+                base_vertex: 0,
+                instances: None,
+                buffer: self.factory.create_index_buffer(index_data.as_slice()),
+            };
 
             let textures = self.texture_cache.get_mut(&positioned_tile.tile).unwrap();
 
@@ -133,6 +104,11 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             };
 
             encoder.draw(&slice, &self.pso, &data);
+        }
+
+        for tile in tiles_to_fetch {
+            let textures = texture_getter::get_textures(&mut self.factory, &tile)?;
+            self.texture_cache.insert(tile, textures);
         }
 
         Ok(())
