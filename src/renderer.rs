@@ -1,6 +1,7 @@
 use errors::*;
 use texture_getter;
 use tile::{Tile, TileTextures};
+use tile_getter;
 
 use gfx;
 use gfx::traits::FactoryExt;
@@ -77,72 +78,6 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         target: gfx::handle::RenderTargetView<R, gfx::format::Srgba8>,
         stencil: gfx::handle::DepthStencilView<R, gfx::format::DepthStencil>,
     ) -> Result<()> {
-        let level0_width = 10.0;
-        let level6_width = level0_width * 2u8.pow(6) as f32;
-
-        let camera_position = self.camera_position.unwrap();
-        let desired_level: u8 = match camera_position[2] {
-            // 0.0...100.0 => 0,
-            // 100.0...200.0 => 1,
-            // 200.0...300.0 => 2,
-            000.0...400.0 => 3,
-            400.0...500.0 => 4,
-            500.0...600.0 => 5,
-            _ => 6,
-        };
-
-        let desired_level_width = level0_width * 2u8.pow(desired_level as u32) as f32;
-        let tile_x = (camera_position[0] / desired_level_width as f32).floor() as i64;
-        let tile_y = (-camera_position[1] / desired_level_width as f32).floor() as i64;
-
-        let num_tiles_across = 128 / 2u8.pow(desired_level as u32);
-
-        let tile_id_x = modulo(tile_x, num_tiles_across as i64);
-        use std::cmp;
-        let tile_id_y = cmp::max(tile_y, 0);
-
-        let tile = Tile {
-            level: desired_level,
-            x: tile_id_x as u8,
-            y: tile_id_y as u8,
-        };
-
-        if !self.texture_cache.contains_key(&tile) {
-            let color_texture = texture_getter::get_color_texture(
-                &mut self.factory,
-                desired_level,
-                tile_id_x as u8,
-                tile_id_y as u8,
-            )?;
-            let elevation_texture = texture_getter::get_elevation_texture(
-                &mut self.factory,
-                desired_level,
-                tile_id_x as u8,
-                tile_id_y as u8,
-            )?;
-
-            self.texture_cache.insert(
-                tile.clone(),
-                TileTextures {
-                    color: color_texture,
-                    elevation: elevation_texture,
-                },
-            );
-        }
-
-        let textures = self.texture_cache.get_mut(&tile).unwrap();
-
-        let data = pipe::Data {
-            o_color: target.clone(),
-            o_depth: stencil.clone(),
-            t_color: (textures.color.clone(), self.sampler.clone()),
-            t_elevation: (textures.elevation.clone(), self.sampler.clone()),
-            u_mvp: self.mvp.ok_or(Error::from("no mvp before call to draw"))?,
-            u_offset: [tile_x as f32 * desired_level_width, tile_y as f32 * desired_level_width],
-            u_width: desired_level_width,
-            vertex_buffer: self.vertex_buffer.clone(),
-        };
-
         let mut index_data = vec![];
         for x in 0..128u16 {
             for y in 0..128u16 {
@@ -164,16 +99,44 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             buffer: self.factory.create_index_buffer(index_data.as_slice()),
         };
 
-        encoder.draw(&slice, &self.pso, &data);
-        Ok(())
-    }
-}
+        let positioned_tiles = tile_getter::desired_tiles(self.camera_position.unwrap());
 
-fn modulo(a: i64, b: i64) -> i64 {
-    let rem = a % b;
-    if rem < 0 {
-        rem + b
-    } else {
-        rem
+        for positioned_tile in positioned_tiles {
+            if !self.texture_cache.contains_key(&positioned_tile.tile) {
+                let color_texture = texture_getter::get_color_texture(
+                    &mut self.factory,
+                    &positioned_tile.tile,
+                )?;
+                let elevation_texture = texture_getter::get_elevation_texture(
+                    &mut self.factory,
+                    &positioned_tile.tile,
+                )?;
+
+                self.texture_cache.insert(
+                    positioned_tile.tile.clone(),
+                    TileTextures {
+                        color: color_texture,
+                        elevation: elevation_texture,
+                    },
+                );
+            }
+
+            let textures = self.texture_cache.get_mut(&positioned_tile.tile).unwrap();
+
+            let data = pipe::Data {
+                o_color: target.clone(),
+                o_depth: stencil.clone(),
+                t_color: (textures.color.clone(), self.sampler.clone()),
+                t_elevation: (textures.elevation.clone(), self.sampler.clone()),
+                u_mvp: self.mvp.ok_or(Error::from("no mvp before call to draw"))?,
+                u_offset: positioned_tile.offset(),
+                u_width: positioned_tile.tile.width(),
+                vertex_buffer: self.vertex_buffer.clone(),
+            };
+
+            encoder.draw(&slice, &self.pso, &data);
+        }
+
+        Ok(())
     }
 }

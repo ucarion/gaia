@@ -5,15 +5,15 @@ use byteorder::{ReadBytesExt, LittleEndian};
 use gfx;
 use image::{self, GenericImage};
 
+use constants::ELEVATION_DATA_OFFSET;
 use errors::*;
+use tile::Tile;
 
 pub fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     factory: &mut F,
-    level: u8,
-    x: u8,
-    y: u8,
+    tile: &Tile,
 ) -> Result<gfx::handle::ShaderResourceView<R, [f32; 4]>> {
-    let path = format!("assets/generated/tiles/{}_{}_{}.jpg", level, x, y);
+    let path = format!("assets/generated/tiles/{}_{}_{}.jpg", tile.level, tile.x, tile.y);
     let texture_image = image::open(path)
         .chain_err(|| "Could not open tile image file")?;
 
@@ -32,11 +32,9 @@ pub fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
 
 pub fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     factory: &mut F,
-    level: u8,
-    x: u8,
-    y: u8,
+    tile: &Tile,
 ) -> Result<gfx::handle::ShaderResourceView<R, u32>> {
-    let path = format!("assets/generated/tiles/{}_{}_{}.elevation", level, x, y);
+    let path = format!("assets/generated/tiles/{}_{}_{}.elevation", tile.level, tile.x, tile.y);
     let file = File::open(path)
         .chain_err(|| "Could not tile elevation file")?;
     let mut file = BufReader::new(file);
@@ -59,9 +57,9 @@ pub fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
 }
 
 fn data_to_elevation(data: u16) -> u16 {
-    if data <= 500 {
+    if data <= ELEVATION_DATA_OFFSET {
         0
     } else {
-        data - 500
+        data - ELEVATION_DATA_OFFSET
     }
 }

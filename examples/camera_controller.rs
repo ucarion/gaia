@@ -36,10 +36,10 @@ const MAX_HEIGHT: f32 = 2500.0;
 const MAX_ANGLE_HEIGHT: f32 = 250.0;
 
 /// The viewing angle when at `MIN_HEIGHT`.
-const MIN_ANGLE: f32 = PI * (1.0 / 4.0);
+const MIN_ANGLE: f32 = PI * 0.3;
 
 /// The viewing angle when at `MAX_ANGLE_HEIGHT` or above.
-const MAX_ANGLE: f32 = PI * (1.0 / 2.0);
+const MAX_ANGLE: f32 = PI * 0.5;
 
 fn clamp(min: f32, max: f32, n: f32) -> f32 {
     min.max(max.min(n))
