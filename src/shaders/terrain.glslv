@@ -8,7 +8,7 @@ uniform usampler2D t_elevation;
 
 out vec2 v_tex_coord;
 
-const float ELEVATION_SCALE_FACTOR = 100.0;
+const float ELEVATION_SCALE_FACTOR = 200.0;
 
 void main() {
     v_tex_coord = a_coord;

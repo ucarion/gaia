@@ -73,7 +73,10 @@ fn run() -> gaia::Result<()> {
         .map_err(|_err| gaia::Error::from("glyph error"))
         .chain_err(|| "Could not create glyphs")?;
 
-    gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
+    gaia_renderer.set_view_info(
+        camera_controller.camera_position(),
+        get_mvp(&window, &camera_controller),
+    );
 
     while let Some(e) = window.next() {
         camera_controller.event(&e);
@@ -84,12 +87,19 @@ fn run() -> gaia::Result<()> {
                 .clear(&window.output_color, [0.3, 0.3, 0.3, 1.0]);
             window.encoder.clear_depth(&window.output_stencil, 1.0);
 
-            gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
-            gaia_renderer.draw(
-                &mut window.encoder,
-                window.output_color.clone(),
-                window.output_stencil.clone(),
+            gaia_renderer.set_view_info(
+                camera_controller.camera_position(),
+                get_mvp(&window, &camera_controller),
             );
+
+            // TODO propagate this error
+            gaia_renderer
+                .draw(
+                    &mut window.encoder,
+                    window.output_color.clone(),
+                    window.output_stencil.clone(),
+                )
+                .unwrap();
 
             window.device.cleanup();
 
@@ -108,7 +118,10 @@ fn run() -> gaia::Result<()> {
         });
 
         e.resize(|_, _| {
-            gaia_renderer.set_mvp(get_mvp(&window, &camera_controller));
+            gaia_renderer.set_view_info(
+                camera_controller.camera_position(),
+                get_mvp(&window, &camera_controller),
+            );
         });
     }
 
