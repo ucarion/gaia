@@ -63,7 +63,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             pso: pso,
             sampler: sampler,
             vertex_buffer: vertex_buffer,
-            texture_cache: LruCache::new(1),
+            texture_cache: LruCache::new(100),
         })
     }
 
@@ -103,10 +103,8 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
         for positioned_tile in positioned_tiles {
             if !self.texture_cache.contains_key(&positioned_tile.tile) {
-                let color_texture = texture_getter::get_color_texture(
-                    &mut self.factory,
-                    &positioned_tile.tile,
-                )?;
+                let color_texture =
+                    texture_getter::get_color_texture(&mut self.factory, &positioned_tile.tile)?;
                 let elevation_texture = texture_getter::get_elevation_texture(
                     &mut self.factory,
                     &positioned_tile.tile,

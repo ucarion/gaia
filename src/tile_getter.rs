@@ -11,7 +11,18 @@ pub fn desired_tiles(camera_position: [f32; 3]) -> Vec<PositionedTile> {
         _ => 6,
     };
 
-    vec![
-        PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]),
-    ]
+    let center =
+        PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]);
+
+    let mut result = vec![];
+    for delta_x in -3..4 {
+        for delta_y in -3..4 {
+            result.push(PositionedTile::from_level_and_position(
+                desired_level,
+                [center.position[0] + delta_x, center.position[1] + delta_y],
+            ));
+        }
+    }
+
+    result
 }

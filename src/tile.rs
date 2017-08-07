@@ -38,12 +38,15 @@ pub struct PositionedTile {
 impl PositionedTile {
     pub fn enclosing_point(level: u8, x: f32, y: f32) -> PositionedTile {
         let width = Tile::level_tile_width(level);
-
         let offset_x = (x / width).floor() as i64;
         let offset_y = (-y / width).floor() as i64;
 
-        let tile_x = modulo(offset_x, Tile::num_tiles_across_level(level));
-        let tile_y = modulo(offset_y, Tile::num_tiles_across_level(level) / 2);
+        Self::from_level_and_position(level, [offset_x, offset_y])
+    }
+
+    pub fn from_level_and_position(level: u8, position: [i64; 2]) -> PositionedTile {
+        let tile_x = modulo(position[0], Tile::num_tiles_across_level(level));
+        let tile_y = modulo(position[1], Tile::num_tiles_across_level(level) / 2);
 
         PositionedTile {
             tile: Tile {
@@ -51,13 +54,16 @@ impl PositionedTile {
                 x: tile_x,
                 y: tile_y,
             },
-            position: [offset_x, offset_y],
+            position: position,
         }
     }
 
     pub fn offset(&self) -> [f32; 2] {
         let width = self.tile.width();
-        [self.position[0] as f32 * width, self.position[1] as f32 * width]
+        [
+            self.position[0] as f32 * width,
+            self.position[1] as f32 * width,
+        ]
     }
 }
 

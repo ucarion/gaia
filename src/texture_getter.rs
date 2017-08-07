@@ -13,7 +13,12 @@ pub fn get_color_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     factory: &mut F,
     tile: &Tile,
 ) -> Result<gfx::handle::ShaderResourceView<R, [f32; 4]>> {
-    let path = format!("assets/generated/tiles/{}_{}_{}.jpg", tile.level, tile.x, tile.y);
+    let path = format!(
+        "assets/generated/tiles/{}_{}_{}.jpg",
+        tile.level,
+        tile.x,
+        tile.y
+    );
     let texture_image = image::open(path)
         .chain_err(|| "Could not open tile image file")?;
 
@@ -34,7 +39,12 @@ pub fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
     factory: &mut F,
     tile: &Tile,
 ) -> Result<gfx::handle::ShaderResourceView<R, u32>> {
-    let path = format!("assets/generated/tiles/{}_{}_{}.elevation", tile.level, tile.x, tile.y);
+    let path = format!(
+        "assets/generated/tiles/{}_{}_{}.elevation",
+        tile.level,
+        tile.x,
+        tile.y
+    );
     let file = File::open(path)
         .chain_err(|| "Could not tile elevation file")?;
     let mut file = BufReader::new(file);
