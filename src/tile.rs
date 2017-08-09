@@ -2,11 +2,19 @@ use constants::LEVEL0_TILE_WIDTH;
 
 use gfx;
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Tile {
     pub level: u8,
     pub x: u8,
     pub y: u8,
+}
+
+#[derive(Debug)]
+pub enum PositionInParent {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
 }
 
 impl Tile {
@@ -23,6 +31,23 @@ impl Tile {
     pub fn width(&self) -> f32 {
         Self::level_tile_width(self.level)
     }
+
+    pub fn parent(&self) -> Tile {
+        Tile {
+            level: self.level + 1,
+            x: self.x / 2,
+            y: self.y / 2,
+        }
+    }
+
+    pub fn position_in_parent(&self) -> PositionInParent {
+        match (self.x % 2 == 0, self.y % 2 == 0) {
+            (true, true) => PositionInParent::TopLeft,
+            (false, true) => PositionInParent::TopRight,
+            (true, false) => PositionInParent::BottomLeft,
+            (false, false) => PositionInParent::BottomRight,
+        }
+    }
 }
 
 /// A regular tile is a key for asset data, but could be anywhere in the world (since the map
@@ -30,6 +55,7 @@ impl Tile {
 /// its position relative to the origin.
 ///
 /// The `position` is that of its top-left corner, in units of its own width.
+#[derive(Clone, Debug)]
 pub struct PositionedTile {
     pub tile: Tile,
     pub position: [i64; 2],
@@ -64,6 +90,13 @@ impl PositionedTile {
             self.position[0] as f32 * width,
             self.position[1] as f32 * width,
         ]
+    }
+
+    pub fn parent(&self) -> PositionedTile {
+        PositionedTile {
+            tile: self.tile.parent(),
+            position: [(self.position[0] as f64 / 2.0).floor() as i64, self.position[1] / 2],
+        }
     }
 }
 

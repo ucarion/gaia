@@ -1,3 +1,4 @@
+use constants::ELEVATION_TILE_WIDTH;
 use errors::*;
 use texture_getter;
 use tile::{Tile, TileTextures};
@@ -49,12 +50,39 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             .chain_err(|| "Could not create pipeline")?;
 
         let mut vertex_data = vec![];
-        for x in 0..128u16 {
-            for y in 0..128u16 {
-                vertex_data.push(Vertex { coord: [x as f32 / 127.0, y as f32 / 127.0] });
+        for y in 0..ELEVATION_TILE_WIDTH {
+            for x in 0..ELEVATION_TILE_WIDTH {
+                let coord_scale = (ELEVATION_TILE_WIDTH - 1) as f32;
+                vertex_data.push(Vertex {
+                    coord: [x as f32 / coord_scale, y as f32 / coord_scale],
+                });
             }
         }
+
         let vertex_buffer = factory.create_vertex_buffer(&vertex_data);
+
+        let mut texture_cache = LruCache::new(100);
+        let tile = Tile {
+            level: 6,
+            x: 0,
+            y: 0,
+        };
+        let textures = texture_getter::get_textures(&mut factory, &tile)?;
+        texture_cache.insert(tile, textures);
+        let tile = Tile {
+            level: 6,
+            x: 1,
+            y: 0,
+        };
+        let textures = texture_getter::get_textures(&mut factory, &tile)?;
+        texture_cache.insert(tile, textures);
+        let tile = Tile {
+            level: 5,
+            x: 1,
+            y: 1,
+        };
+        let textures = texture_getter::get_textures(&mut factory, &tile)?;
+        texture_cache.insert(tile, textures);
 
         Ok(Renderer {
             camera_position: None,
@@ -63,7 +91,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             pso: pso,
             sampler: sampler,
             vertex_buffer: vertex_buffer,
-            texture_cache: LruCache::new(100),
+            texture_cache: texture_cache,
         })
     }
 
@@ -106,10 +134,10 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             encoder.draw(&slice, &self.pso, &data);
         }
 
-        for tile in tiles_to_fetch {
-            let textures = texture_getter::get_textures(&mut self.factory, &tile)?;
-            self.texture_cache.insert(tile, textures);
-        }
+        // for tile in tiles_to_fetch {
+        //     let textures = texture_getter::get_textures(&mut self.factory, &tile)?;
+        //     self.texture_cache.insert(tile, textures);
+        // }
 
         Ok(())
     }

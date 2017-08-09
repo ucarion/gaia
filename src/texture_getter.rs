@@ -5,7 +5,7 @@ use byteorder::{ReadBytesExt, LittleEndian};
 use gfx;
 use image::{self, GenericImage};
 
-use constants::ELEVATION_DATA_OFFSET;
+use constants::{ELEVATION_DATA_OFFSET, ELEVATION_TILE_WIDTH};
 use errors::*;
 use tile::{Tile, TileTextures};
 
@@ -59,12 +59,17 @@ fn get_elevation_texture<R: gfx::Resources, F: gfx::Factory<R>>(
         .chain_err(|| "Could not tile elevation file")?;
     let mut file = BufReader::new(file);
 
-    let mut buf = Vec::new();
+    let buf_capacity = ELEVATION_TILE_WIDTH * ELEVATION_TILE_WIDTH;
+    let mut buf = Vec::with_capacity(buf_capacity as usize);
     while let Ok(data) = file.read_u16::<LittleEndian>() {
         buf.push(data_to_elevation(data));
     }
 
-    let texture_kind = gfx::texture::Kind::D2(128, 128, gfx::texture::AaMode::Single);
+    let texture_kind = gfx::texture::Kind::D2(
+        ELEVATION_TILE_WIDTH,
+        ELEVATION_TILE_WIDTH,
+        gfx::texture::AaMode::Single,
+    );
 
     let (_, texture_view) = factory
         .create_texture_immutable::<(gfx::format::R16, gfx::format::Uint)>(

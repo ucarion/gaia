@@ -67,74 +67,57 @@ crop_blue_marble_tile() {
     local name_offset_x=$(($blue_marble_x * 32))
     local name_offset_y=$(($blue_marble_y * 32))
 
-    local name_template_x="%[fx:page.x / 254 + $name_offset_x]"
-    local name_template_y="%[fx:page.y / 254 + $name_offset_y]"
+    local name_template_x="%[fx:page.x / 256 + $name_offset_x]"
+    local name_template_y="%[fx:page.y / 256 + $name_offset_y]"
     local name_template="0_${name_template_x}_${name_template_y}.jpg"
 
     # There are four Blue Marble tiles along the width, so each tile generates a
-    # fourth of the tiles per row. Each tile is 254px wide, and there are 128
+    # fourth of the tiles per row. Each tile is 256px wide, and there are 128
     # tiles across (for 32 tiles across per quarter, hence the 32 in
     # name_offset_*).
     #
-    # 254 * 128 / 4 = 8128
+    # 256px * 128 / 4 = 8192
     convert -monitor "assets/nasa_blue_marble/$blue_marble_prefix$1.jpg" \
-        -resize 8128 \
-        -crop 254x254 \
+        -resize 8192 \
+        -crop 256x256 \
         -set filename:tile "$name_template" \
         +repage +adjoin \
         "$crops_dir/%[filename:tile]"
 }
 
-letter_to_ascii() {
-    # use `od` to interpret letter as ASCII. `-An` means only the inputted
-    # character's code will be printed (else there'd be a line number)
-    echo "$1" | tr -d "\n" | od -An -t uC | tr -d "[:space:]"
+# Args: <offset-x> <offset-y> <top-height> <bottom-height> <top-left> <top-right> <bottom-left> <bottom-right>
+create_level0_elevation_quadrant() {
+    # Each GLOBE tile represents a quarter of the width of the world. There are
+    # 128 elevation crops across the width at level0, and each is 64px wide.
+    #
+    # 64px * 128 / 4 = 2048px
+    #
+    # (Note that the -resize applies to individual tiles, not them appended
+    # together, so there's no need to multiply this value by two.)
+    convert -monitor -depth 16 \
+        \( -monitor -size "10800x${3}" \
+            "gray:assets/noaa_globe/$5" \
+            "gray:assets/noaa_globe/$6" \
+            -evaluate addmodulus 500 -resize 2048 +append \
+        \) \
+        \( -monitor -size "10800x${4}" \
+            "gray:assets/noaa_globe/$7" \
+            "gray:assets/noaa_globe/$8" \
+            -evaluate addmodulus 500 -resize 2048 +append \
+        \) \
+        -append \
+        -crop 64x64 \
+        -set filename:tile "0_%[fx:page.x / 64 + $1]_%[fx:page.y / 64 + $2].elevation" \
+        +repage +adjoin \
+        "gray:$crops_dir/%[filename:tile]"
 }
 
 create_level0_elevation() {
-    # TODO this could be done in four, smaller crops instead of two
     log "Generating elevation crops from GLOBE tiles"
-    convert -monitor -depth 16 \
-        \( -monitor -size 10800x4800 \
-            gray:assets/noaa_globe/a10g \
-            gray:assets/noaa_globe/b10g \
-            gray:assets/noaa_globe/c10g \
-            gray:assets/noaa_globe/d10g \
-            -evaluate addmodulus 500 -resize 4064 +append \
-        \) \
-        \( -monitor -size 10800x6000 \
-            gray:assets/noaa_globe/e10g \
-            gray:assets/noaa_globe/f10g \
-            gray:assets/noaa_globe/g10g \
-            gray:assets/noaa_globe/h10g \
-            -evaluate addmodulus 500 -resize 4064 +append \
-        \) \
-        -append \
-        -crop 127x127 \
-        -set filename:tile "0_%[fx:page.x / 127]_%[fx:page.y / 127].elevation" \
-        +repage +adjoin \
-        "gray:$crops_dir/%[filename:tile]"
-
-    convert -monitor -depth 16 \
-        \( -monitor -size 10800x6000 \
-            gray:assets/noaa_globe/i10g \
-            gray:assets/noaa_globe/j10g \
-            gray:assets/noaa_globe/k10g \
-            gray:assets/noaa_globe/l10g \
-            -evaluate addmodulus 500 -resize 4064 +append \
-        \) \
-        \( -monitor -size 10800x4800 \
-            gray:assets/noaa_globe/m10g \
-            gray:assets/noaa_globe/n10g \
-            gray:assets/noaa_globe/o10g \
-            gray:assets/noaa_globe/p10g \
-            -evaluate addmodulus 500 -resize 4064 +append \
-        \) \
-        -append \
-        -crop 127x127 \
-        -set filename:tile "0_%[fx:page.x / 127]_%[fx:page.y / 127 + 32].elevation" \
-        +repage +adjoin \
-        "gray:$crops_dir/%[filename:tile]"
+    create_level0_elevation_quadrant  0  0 4800 6000 a10g b10g e10g f10g
+    create_level0_elevation_quadrant  64 0 4800 6000 c10g d10g g10g h10g
+    create_level0_elevation_quadrant  0 32 6000 4800 i10g j10g m10g n10g
+    create_level0_elevation_quadrant 64 32 6000 4800 k10g l10g o10g p10g
 }
 
 create_crops_for_level() {
@@ -164,11 +147,10 @@ create_crops_for_level() {
                 -append \
                 "$crops_dir/${1}_${x}_${y}.jpg"
 
-            convert -depth 16 -size 127x127 \
-                \( "gray:${top_left}.elevation" "gray:${top_right}.elevation" +append \) \
-                \( "gray:${bottom_left}.elevation" "gray:${bottom_right}.elevation" +append \) \
+            convert -depth 16 -size 64x64 \
+                \( "gray:${top_left}.elevation" "gray:${top_right}.elevation" -resize 50% +append \) \
+                \( "gray:${bottom_left}.elevation" "gray:${bottom_right}.elevation" -resize 50% +append \) \
                 -append \
-                -resize 127x127 \
                 "gray:$crops_dir/${1}_${x}_${y}.elevation"
         done
     done
@@ -211,25 +193,25 @@ create_tiles_for_level() {
             convert \
                 \( \
                     \( "${top_left}.jpg" \) \
-                    \( "${top_right}.jpg" -crop "2x254+0+0" \) \
+                    \( "${top_right}.jpg" -crop "4x256+0+0" \) \
                     +append \
                 \) \
                 \( \
-                    \( "${bottom_left}.jpg" -gravity $gravity_below -crop "254x2+0+0" \) \
-                    \( "${bottom_right}.jpg" -gravity $gravity_below -crop "2x2+0+0" \) \
+                    \( "${bottom_left}.jpg" -gravity $gravity_below -crop "256x4+0+0" \) \
+                    \( "${bottom_right}.jpg" -gravity $gravity_below -crop "4x4+0+0" \) \
                     +append \
                 \) \
                 -append \
                 "$tiles_dir/${1}_${x}_${y}.jpg"
 
-            convert -depth 16 -size 127x127 \
+            convert -depth 16 -size 64x64 \
                 \( \
                     \( "gray:${top_left}.elevation" \) \
-                    \( "gray:${top_right}.elevation" -crop "1x127+0+0" \) \
+                    \( "gray:${top_right}.elevation" -crop "1x64+0+0" \) \
                     +append \
                 \) \
                 \( \
-                    \( "gray:${bottom_left}.elevation" -gravity $gravity_below -crop "127x1+0+0" \) \
+                    \( "gray:${bottom_left}.elevation" -gravity $gravity_below -crop "64x1+0+0" \) \
                     \( "gray:${bottom_right}.elevation" -gravity $gravity_below -crop "1x1+0+0" \) \
                     +append \
                 \) \
@@ -265,5 +247,5 @@ create_tiles() {
 mkdir -p "$crops_dir"
 mkdir -p "$tiles_dir"
 
-create_crops
+# create_crops
 create_tiles
