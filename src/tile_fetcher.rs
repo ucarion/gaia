@@ -1,44 +1,29 @@
-use std::collections::BinaryHeap;
 use std::sync::mpsc;
-use std::time::Instant;
 
 use errors::*;
 use texture_getter::TileTextureData;
 use tile::Tile;
 
-#[derive(Eq, PartialEq, Ord, PartialOrd)]
-struct FetchJob {
-    created_at: Instant,
-    tile: Tile,
-}
-
-impl FetchJob {
-    fn new(tile: Tile) -> FetchJob {
-        FetchJob {
-            created_at: Instant::now(),
-            tile: tile,
-        }
-    }
-}
-
 pub fn fetch_tiles(
     receive_tiles: mpsc::Receiver<Tile>,
     send_textures: mpsc::Sender<(Tile, Result<TileTextureData>)>,
 ) {
-    let mut queue = BinaryHeap::new();
+    let mut jobs = Vec::new();
 
     loop {
-        if queue.is_empty() {
-            queue.push(FetchJob::new(receive_tiles.recv().unwrap()));
+        if jobs.is_empty() {
+            let tile = receive_tiles.recv().unwrap();
+            jobs.push(tile);
         }
 
         for tile in receive_tiles.try_iter() {
-            queue.push(FetchJob::new(tile));
+            if !jobs.contains(&tile) {
+                jobs.push(tile);
+            }
         }
 
-        if let Some(job) = queue.pop() {
-            let textures = TileTextureData::new(&job.tile);
-            send_textures.send((job.tile, textures)).unwrap();
-        }
+        let tile = jobs.pop().unwrap();
+        let textures = TileTextureData::new(&tile);
+        send_textures.send((tile, textures)).unwrap();
     }
 }

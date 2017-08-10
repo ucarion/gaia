@@ -66,13 +66,13 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         }
 
         let vertex_buffer = factory.create_vertex_buffer(&vertex_data);
-        let texture_cache = LruCache::new(100);
+        let texture_cache = LruCache::new(2048);
 
         let (send_tiles, receive_tiles) = mpsc::channel::<Tile>();
         let (send_textures, receive_textures) = mpsc::channel();
 
         thread::Builder::new()
-            .name("texture_loader".to_string())
+            .name("tile_fetcher".to_string())
             .spawn(move || tile_fetcher::fetch_tiles(receive_tiles, send_textures))
             .chain_err(|| "Error creating texture loader thread")?;
 

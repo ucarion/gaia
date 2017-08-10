@@ -1,3 +1,5 @@
+use std::cmp;
+
 use gfx;
 use lru_cache::LruCache;
 
@@ -33,29 +35,34 @@ pub fn get_tiles<R: gfx::Resources>(
 }
 
 fn desired_tiles(camera_position: [f32; 3]) -> Vec<PositionedTile> {
-    let desired_level: u8 = match camera_position[2] {
-        // 0.0...100.0 => 0,
-        000.0...200.0 => 1,
-        200.0...300.0 => 2,
-        300.0...400.0 => 3,
-        400.0...500.0 => 4,
-        500.0...600.0 => 5,
-        _ => 6,
+    let (desired_level, num_tiles_around) = match camera_position[2] {
+        000.0...100.0 => (0, 5),
+        100.0...300.0 => (1, 5),
+        300.0...500.0 => (2, 5),
+        500.0...600.0 => (3, 3),
+        600.0...750.0 => (4, 3),
+        _ => (5, 2),
     };
 
     let center =
         PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]);
+    let center_x = center.position[0];
+    let center_y = center.position[1];
+
+    let min_x = center_x - num_tiles_around;
+    let max_x = center_x + num_tiles_around;
+    let min_y = cmp::max(0, center_y - num_tiles_around);
+    let max_y = cmp::min(
+        Tile::num_tiles_across_level_height(desired_level) as i64 - 1,
+        center_y + num_tiles_around,
+    );
 
     let mut result = vec![];
-    for delta_x in -1..2 {
-        for delta_y in -1..2 {
-            if center.position[1] + delta_y < 0 {
-                continue;
-            }
-
+    for tile_x in min_x..max_x + 1 {
+        for tile_y in min_y..max_y + 1 {
             result.push(PositionedTile::from_level_and_position(
                 desired_level,
-                [center.position[0] + delta_x, center.position[1] + delta_y],
+                [tile_x, tile_y],
             ));
         }
     }

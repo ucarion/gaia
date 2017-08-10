@@ -22,8 +22,12 @@ impl Tile {
     }
 
     /// For a given level, the number of tiles across the width of the map.
-    pub fn num_tiles_across_level(level: u8) -> u8 {
+    pub fn num_tiles_across_level_width(level: u8) -> u8 {
         128 / 2u8.pow(level as u32)
+    }
+
+    pub fn num_tiles_across_level_height(level: u8) -> u8 {
+        Self::num_tiles_across_level_width(level) / 2
     }
 
     pub fn width(&self) -> f32 {
@@ -69,8 +73,8 @@ impl PositionedTile {
     }
 
     pub fn from_level_and_position(level: u8, position: [i64; 2]) -> PositionedTile {
-        let tile_x = modulo(position[0], Tile::num_tiles_across_level(level));
-        let tile_y = modulo(position[1], Tile::num_tiles_across_level(level) / 2);
+        let tile_x = modulo(position[0], Tile::num_tiles_across_level_width(level));
+        let tile_y = modulo(position[1], Tile::num_tiles_across_level_height(level));
 
         PositionedTile {
             tile: Tile {

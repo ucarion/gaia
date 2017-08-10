@@ -6,7 +6,7 @@
 pub const ELEVATION_DATA_OFFSET: u16 = 500;
 
 /// The width of a tile's color texture.
-pub const COLOR_TILE_WIDTH: u16 = 260;
+pub const COLOR_TILE_WIDTH: u16 = 256;
 
 /// The width of a tile's elevation heightmap.
 ///

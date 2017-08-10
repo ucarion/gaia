@@ -172,6 +172,9 @@ create_tiles_for_level() {
         progressbar $x $(($last_tile_x + 1))
 
         for y in $(seq 0 $last_tile_y); do
+            # For images, just copy the relevant crop
+            cp "$crops_dir/${1}_${x}_${y}.jpg" "$tiles_dir/${1}_${x}_${y}.jpg"
+
             local right_x=$((($x + 1) % $level_width))
             local below_y=$(($y + 1))
             local gravity_below="northwest"
@@ -185,34 +188,20 @@ create_tiles_for_level() {
                 gravity_below="southwest"
             fi
 
-            local top_left="$crops_dir/${1}_${x}_${y}"
-            local top_right="$crops_dir/${1}_${right_x}_${y}"
-            local bottom_left="$crops_dir/${1}_${x}_${below_y}"
-            local bottom_right="$crops_dir/${1}_${right_x}_${below_y}"
-
-            convert \
-                \( \
-                    \( "${top_left}.jpg" \) \
-                    \( "${top_right}.jpg" -crop "4x256+0+0" \) \
-                    +append \
-                \) \
-                \( \
-                    \( "${bottom_left}.jpg" -gravity $gravity_below -crop "256x4+0+0" \) \
-                    \( "${bottom_right}.jpg" -gravity $gravity_below -crop "4x4+0+0" \) \
-                    +append \
-                \) \
-                -append \
-                "$tiles_dir/${1}_${x}_${y}.jpg"
+            local top_left="$crops_dir/${1}_${x}_${y}.elevation"
+            local top_right="$crops_dir/${1}_${right_x}_${y}.elevation"
+            local bottom_left="$crops_dir/${1}_${x}_${below_y}.elevation"
+            local bottom_right="$crops_dir/${1}_${right_x}_${below_y}.elevation"
 
             convert -depth 16 -size 64x64 \
                 \( \
-                    \( "gray:${top_left}.elevation" \) \
-                    \( "gray:${top_right}.elevation" -crop "1x64+0+0" \) \
+                    \( "gray:${top_left}" \) \
+                    \( "gray:${top_right}" -crop "1x64+0+0" \) \
                     +append \
                 \) \
                 \( \
-                    \( "gray:${bottom_left}.elevation" -gravity $gravity_below -crop "64x1+0+0" \) \
-                    \( "gray:${bottom_right}.elevation" -gravity $gravity_below -crop "1x1+0+0" \) \
+                    \( "gray:${bottom_left}" -gravity $gravity_below -crop "64x1+0+0" \) \
+                    \( "gray:${bottom_right}" -gravity $gravity_below -crop "1x1+0+0" \) \
                     +append \
                 \) \
                 -append \
