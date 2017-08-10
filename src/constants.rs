@@ -5,7 +5,10 @@
 /// When reading elevation data from Imagemagick's output, the elevation should be converted back.
 pub const ELEVATION_DATA_OFFSET: u16 = 500;
 
-/// The number of elevation data points per tile.
+/// The width of a tile's color texture.
+pub const COLOR_TILE_WIDTH: u16 = 260;
+
+/// The width of a tile's elevation heightmap.
 ///
 /// This must be `2^N + 1` for some integer `N >= 6`, so that the tiles can be sub-divided with
 /// overlapping edges, and that a level 6 tile can be divided 6 times.

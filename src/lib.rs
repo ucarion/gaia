@@ -10,6 +10,7 @@ extern crate lru_cache;
 mod constants;
 mod texture_getter;
 mod tile;
+mod tile_fetcher;
 mod tile_getter;
 pub mod errors;
 pub mod renderer;

@@ -2,7 +2,8 @@ use gfx;
 use lru_cache::LruCache;
 
 use constants::{ELEVATION_TILE_WIDTH, MAX_TILE_LEVEL};
-use tile::{PositionedTile, PositionInParent, Tile, TileTextures};
+use texture_getter::TileTextures;
+use tile::{PositionedTile, PositionInParent, Tile};
 
 /// Gets tiles that can be rendered immediately, and tiles that should be fetched.
 ///

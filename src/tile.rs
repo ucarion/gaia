@@ -1,8 +1,6 @@
 use constants::LEVEL0_TILE_WIDTH;
 
-use gfx;
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct Tile {
     pub level: u8,
     pub x: u8,
@@ -95,7 +93,10 @@ impl PositionedTile {
     pub fn parent(&self) -> PositionedTile {
         PositionedTile {
             tile: self.tile.parent(),
-            position: [(self.position[0] as f64 / 2.0).floor() as i64, self.position[1] / 2],
+            position: [
+                (self.position[0] as f64 / 2.0).floor() as i64,
+                self.position[1] / 2,
+            ],
         }
     }
 }
@@ -107,9 +108,4 @@ fn modulo(a: i64, b: u8) -> u8 {
     } else {
         rem as u8
     }
-}
-
-pub struct TileTextures<R: gfx::Resources> {
-    pub color: gfx::handle::ShaderResourceView<R, [f32; 4]>,
-    pub elevation: gfx::handle::ShaderResourceView<R, u32>,
 }

@@ -1,11 +1,15 @@
+use std::sync::mpsc;
+use std::thread;
+
 use constants::ELEVATION_TILE_WIDTH;
 use errors::*;
-use texture_getter;
-use tile::{Tile, TileTextures};
+use texture_getter::{TileTextures, TileTextureData};
+use tile::Tile;
+use tile_fetcher;
 use tile_getter;
 
-use gfx;
 use gfx::traits::FactoryExt;
+use gfx;
 use lru_cache::LruCache;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -29,9 +33,11 @@ pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
     factory: F,
     mvp: Option<[[f32; 4]; 4]>,
     pso: gfx::PipelineState<R, pipe::Meta>,
+    receive_textures: mpsc::Receiver<(Tile, Result<TileTextureData>)>,
     sampler: gfx::handle::Sampler<R>,
-    vertex_buffer: gfx::handle::Buffer<R, Vertex>,
+    send_tiles: mpsc::Sender<Tile>,
     texture_cache: LruCache<Tile, TileTextures<R>>,
+    vertex_buffer: gfx::handle::Buffer<R, Vertex>,
 }
 
 impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
@@ -60,38 +66,26 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         }
 
         let vertex_buffer = factory.create_vertex_buffer(&vertex_data);
+        let texture_cache = LruCache::new(100);
 
-        let mut texture_cache = LruCache::new(100);
-        let tile = Tile {
-            level: 6,
-            x: 0,
-            y: 0,
-        };
-        let textures = texture_getter::get_textures(&mut factory, &tile)?;
-        texture_cache.insert(tile, textures);
-        let tile = Tile {
-            level: 6,
-            x: 1,
-            y: 0,
-        };
-        let textures = texture_getter::get_textures(&mut factory, &tile)?;
-        texture_cache.insert(tile, textures);
-        let tile = Tile {
-            level: 5,
-            x: 1,
-            y: 1,
-        };
-        let textures = texture_getter::get_textures(&mut factory, &tile)?;
-        texture_cache.insert(tile, textures);
+        let (send_tiles, receive_tiles) = mpsc::channel::<Tile>();
+        let (send_textures, receive_textures) = mpsc::channel();
+
+        thread::Builder::new()
+            .name("texture_loader".to_string())
+            .spawn(move || tile_fetcher::fetch_tiles(receive_tiles, send_textures))
+            .chain_err(|| "Error creating texture loader thread")?;
 
         Ok(Renderer {
             camera_position: None,
             factory: factory,
             mvp: None,
             pso: pso,
+            receive_textures: receive_textures,
             sampler: sampler,
-            vertex_buffer: vertex_buffer,
+            send_tiles: send_tiles,
             texture_cache: texture_cache,
+            vertex_buffer: vertex_buffer,
         })
     }
 
@@ -106,8 +100,22 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         target: gfx::handle::RenderTargetView<R, gfx::format::Srgba8>,
         stencil: gfx::handle::DepthStencilView<R, gfx::format::DepthStencil>,
     ) -> Result<()> {
+        // Get tiles loaded in background thread, and put them in the cache
+        for (tile, tile_texture_data) in self.receive_textures.try_iter() {
+            let tile_textures = tile_texture_data?.create_textures(&mut self.factory)?;
+            self.texture_cache.insert(tile, tile_textures);
+        }
+
+        // Using the updated cache, get tiles to render and those that should be added to cache
         let (tiles_to_render, tiles_to_fetch) =
             tile_getter::get_tiles(self.camera_position.unwrap(), &mut self.texture_cache);
+
+        // Queue tiles to fetch for background thread
+        for tile_to_fetch in tiles_to_fetch {
+            self.send_tiles
+                .send(tile_to_fetch)
+                .chain_err(|| "Error sending tile to background thread")?;
+        }
 
         for (positioned_tile, index_data) in tiles_to_render {
             let slice = gfx::Slice {
@@ -133,11 +141,6 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
             encoder.draw(&slice, &self.pso, &data);
         }
-
-        // for tile in tiles_to_fetch {
-        //     let textures = texture_getter::get_textures(&mut self.factory, &tile)?;
-        //     self.texture_cache.insert(tile, textures);
-        // }
 
         Ok(())
     }
