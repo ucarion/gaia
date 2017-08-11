@@ -1,3 +1,5 @@
+#[macro_use] extern crate error_chain;
+
 extern crate cam;
 extern crate fps_counter;
 extern crate gaia;
@@ -15,6 +17,8 @@ use fps_counter::FPSCounter;
 use gfx::Device;
 use piston::window::WindowSettings;
 use piston_window::*;
+
+error_chain! {}
 
 fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
     let draw_size = window.window.draw_size();
@@ -51,15 +55,12 @@ fn main() {
     }
 }
 
-fn run() -> gaia::Result<()> {
-    use gaia::errors::ResultExt;
-
+fn run() -> Result<()> {
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
         .opengl(OpenGL::V3_2)
         .build()
-        .map_err(gaia::Error::from)
-        .chain_err(|| "Could not create window")?;
+        .map_err(Error::from)?;
 
     let mut camera_controller = CameraController::new();
     let mut gaia_renderer = gaia::Renderer::new(window.factory.clone())
@@ -68,10 +69,9 @@ fn run() -> gaia::Result<()> {
     let mut fps_counter = FPSCounter::new();
     let mut fps = 0;
 
-    // TODO get the actual error
+    // TODO get the actual error, but it's not std::error::Error
     let mut glyphs = Glyphs::new("assets/fonts/FiraSans-Regular.ttf", window.factory.clone())
-        .map_err(|_err| gaia::Error::from("glyph error"))
-        .chain_err(|| "Could not create glyphs")?;
+        .map_err(|_err| Error::from("glyph error"))?;
 
     gaia_renderer.set_view_info(
         camera_controller.camera_position(),
