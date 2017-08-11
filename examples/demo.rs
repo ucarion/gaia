@@ -1,4 +1,5 @@
-#[macro_use] extern crate error_chain;
+#[macro_use]
+extern crate error_chain;
 
 extern crate cam;
 extern crate fps_counter;
@@ -18,7 +19,7 @@ use gfx::Device;
 use piston::window::WindowSettings;
 use piston_window::*;
 
-error_chain! {}
+error_chain!{}
 
 fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
     let draw_size = window.window.draw_size();
@@ -55,6 +56,10 @@ fn main() {
     }
 }
 
+const GAIA_WORLD_HEIGHT: f32 = 1000.0;
+const MIN_CAMERA_HEIGHT: f32 = 40.0;
+const MAX_CAMERA_HEIGHT: f32 = 1200.0;
+
 fn run() -> Result<()> {
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
@@ -62,8 +67,9 @@ fn run() -> Result<()> {
         .build()
         .map_err(Error::from)?;
 
-    let mut camera_controller = CameraController::new();
-    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone())
+    let mut camera_controller =
+        CameraController::new(GAIA_WORLD_HEIGHT, MIN_CAMERA_HEIGHT, MAX_CAMERA_HEIGHT);
+    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone(), GAIA_WORLD_HEIGHT)
         .chain_err(|| "Could not create renderer")?;
 
     let mut fps_counter = FPSCounter::new();

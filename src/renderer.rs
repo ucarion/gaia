@@ -31,6 +31,7 @@ gfx_pipeline!(pipe {
 pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
     camera_position: Option<[f32; 3]>,
     factory: F,
+    level0_tile_width: f32,
     mvp: Option<[[f32; 4]; 4]>,
     pso: gfx::PipelineState<R, pipe::Meta>,
     receive_textures: mpsc::Receiver<(Tile, Result<TileTextureData>)>,
@@ -41,7 +42,9 @@ pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
 }
 
 impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
-    pub fn new(mut factory: F) -> Result<Renderer<R, F>> {
+    pub fn new(mut factory: F, world_height: f32) -> Result<Renderer<R, F>> {
+        let level0_tile_width = world_height / Tile::num_tiles_across_level_height(0) as f32;
+
         let sampler = factory.create_sampler(gfx::texture::SamplerInfo::new(
             gfx::texture::FilterMethod::Bilinear,
             gfx::texture::WrapMode::Clamp,
@@ -73,12 +76,15 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
         thread::Builder::new()
             .name("tile_fetcher".to_string())
-            .spawn(move || tile_fetcher::fetch_tiles(receive_tiles, send_textures))
+            .spawn(move || {
+                tile_fetcher::fetch_tiles(receive_tiles, send_textures)
+            })
             .chain_err(|| "Error creating texture loader thread")?;
 
         Ok(Renderer {
             camera_position: None,
             factory: factory,
+            level0_tile_width: level0_tile_width,
             mvp: None,
             pso: pso,
             receive_textures: receive_textures,
@@ -107,8 +113,11 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         }
 
         // Using the updated cache, get tiles to render and those that should be added to cache
-        let (tiles_to_render, tiles_to_fetch) =
-            tile_getter::get_tiles(self.camera_position.unwrap(), &mut self.texture_cache);
+        let (tiles_to_render, tiles_to_fetch) = tile_getter::get_tiles(
+            self.level0_tile_width,
+            self.camera_position.unwrap(),
+            &mut self.texture_cache,
+        );
 
         // Queue tiles to fetch for background thread
         for tile_to_fetch in tiles_to_fetch {
@@ -134,8 +143,8 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
                 t_color: (textures.color.clone(), self.sampler.clone()),
                 t_elevation: (textures.elevation.clone(), self.sampler.clone()),
                 u_mvp: self.mvp.ok_or(Error::from("no mvp before call to draw"))?,
-                u_offset: positioned_tile.offset(),
-                u_width: positioned_tile.tile.width(),
+                u_offset: positioned_tile.offset(self.level0_tile_width),
+                u_width: positioned_tile.tile.width(self.level0_tile_width),
                 vertex_buffer: self.vertex_buffer.clone(),
             };
 

@@ -1,5 +1,7 @@
-#[macro_use] extern crate error_chain;
-#[macro_use] extern crate gfx;
+#[macro_use]
+extern crate error_chain;
+#[macro_use]
+extern crate gfx;
 
 extern crate byteorder;
 extern crate image;

@@ -15,13 +15,14 @@ use tile::{PositionedTile, PositionInParent, Tile};
 /// The second list is the desired tiles for the current camera position. These should be fetched
 /// and put into cache, so that future calls to this function can use them.
 pub fn get_tiles<R: gfx::Resources>(
+    level0_tile_width: f32,
     camera_position: [f32; 3],
     texture_cache: &mut LruCache<Tile, TileTextures<R>>,
 ) -> (Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
     let mut tiles_to_render = vec![];
     let mut tiles_to_fetch = vec![];
 
-    for desired_tile in desired_tiles(camera_position) {
+    for desired_tile in desired_tiles(level0_tile_width, camera_position) {
         if !texture_cache.contains_key(&desired_tile.tile) {
             tiles_to_fetch.push(desired_tile.tile.clone());
         }
@@ -34,7 +35,7 @@ pub fn get_tiles<R: gfx::Resources>(
     (tiles_to_render, tiles_to_fetch)
 }
 
-fn desired_tiles(camera_position: [f32; 3]) -> Vec<PositionedTile> {
+fn desired_tiles(level0_tile_width: f32, camera_position: [f32; 3]) -> Vec<PositionedTile> {
     let (desired_level, num_tiles_around) = match camera_position[2] {
         000.0...100.0 => (0, 5),
         100.0...300.0 => (1, 5),
@@ -44,8 +45,12 @@ fn desired_tiles(camera_position: [f32; 3]) -> Vec<PositionedTile> {
         _ => (5, 2),
     };
 
-    let center =
-        PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]);
+    let center = PositionedTile::enclosing_point(
+        level0_tile_width,
+        desired_level,
+        camera_position[0],
+        camera_position[1],
+    );
     let center_x = center.position[0];
     let center_y = center.position[1];
 
