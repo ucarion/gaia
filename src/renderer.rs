@@ -5,8 +5,8 @@ use constants::ELEVATION_TILE_WIDTH;
 use errors::*;
 use texture_getter::{TileTextures, TileTextureData};
 use tile::Tile;
+use tile_chooser;
 use tile_fetcher;
-use tile_getter;
 
 use gfx::traits::FactoryExt;
 use gfx;
@@ -113,7 +113,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         }
 
         // Using the updated cache, get tiles to render and those that should be added to cache
-        let (tiles_to_render, tiles_to_fetch) = tile_getter::get_tiles(
+        let (tiles_to_render, tiles_to_fetch) = tile_chooser::choose_tiles(
             self.level0_tile_width,
             self.camera_position.unwrap(),
             &mut self.texture_cache,

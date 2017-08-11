@@ -14,7 +14,7 @@ use tile::{PositionedTile, PositionInParent, Tile};
 ///
 /// The second list is the desired tiles for the current camera position. These should be fetched
 /// and put into cache, so that future calls to this function can use them.
-pub fn get_tiles<R: gfx::Resources>(
+pub fn choose_tiles<R: gfx::Resources>(
     level0_tile_width: f32,
     camera_position: [f32; 3],
     texture_cache: &mut LruCache<Tile, TileTextures<R>>,

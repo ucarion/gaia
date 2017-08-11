@@ -12,8 +12,8 @@ mod errors;
 mod renderer;
 mod texture_getter;
 mod tile;
+mod tile_chooser;
 mod tile_fetcher;
-mod tile_getter;
 
 pub use errors::{Error, ErrorKind, Result};
 pub use renderer::Renderer;
