@@ -4,6 +4,8 @@ use cam::Camera;
 use piston::input::{Button, GenericEvent};
 use piston::input::mouse::MouseButton;
 
+// Many of these constants only make sense based on values specified in `demo.rs`.
+
 /// Determines for how long height changes after a scroll event. If set to 0.01, then height
 /// velocity will decrease by 99% every second.
 const HEIGHT_VELOCITY_AFTER_SECOND: f32 = 0.01;
@@ -18,18 +20,26 @@ const DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT: f32 = 0.2;
 /// Same as `DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT`, but when the camera is at maximum height.
 const DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT: f32 = 5.0;
 
-/// Past a certain height, the angle is always MAX_ANGLE. This cutoff height is
-/// MAX_ANGLE_HEIGHT_RATIO-percent between the min and max height.
-const MAX_ANGLE_HEIGHT_RATIO: f32 = 0.25;
+/// The lowest the camera can go.
+const MIN_HEIGHT: f32 = 40.0;
+
+/// The highest the camera can go.
+const MAX_HEIGHT: f32 = 1200.0;
+
+/// The height above which the viewing angle will always be `MAX_ANGLE`.
+const MAX_ANGLE_HEIGHT: f32 = 250.0;
 
 /// The viewing angle when at `MIN_HEIGHT`.
 const MIN_ANGLE: f32 = PI * 0.3;
 
-/// The viewing angle when at `MAX_HEIGHT`.
+/// The viewing angle when at `MAX_ANGLE_HEIGHT` or above.
 const MAX_ANGLE: f32 = PI * 0.5;
 
-/// The "highest up" (furthest north) the camera can look at.
+/// The furthest "up" (north) the camera can be looking at.
 const MAX_Y: f32 = 0.0;
+
+/// The furthest "down" (south) the camera can be looking at.
+const MIN_Y: f32 = -1000.0;
 
 fn clamp(min: f32, max: f32, n: f32) -> f32 {
     min.max(max.min(n))
@@ -41,25 +51,19 @@ fn linear_interpolate(min: f32, max: f32, t: f32) -> f32 {
 
 #[derive(Debug)]
 pub struct CameraController {
-    dragging: bool,
-    height: f32,
     look_at: [f32; 2],
-    max_height: f32,
-    min_height: f32,
+    height: f32,
     velocity: [f32; 3],
-    world_height: f32,
+    dragging: bool,
 }
 
 impl CameraController {
-    pub fn new(world_height: f32, min_height: f32, max_height: f32) -> CameraController {
+    pub fn new() -> CameraController {
         CameraController {
-            dragging: false,
-            height: max_height,
             look_at: [0.0, 0.0],
-            max_height: max_height,
-            min_height: min_height,
+            height: MAX_HEIGHT,
             velocity: [0.0, 0.0, 0.0],
-            world_height: world_height,
+            dragging: false,
         }
     }
 
@@ -72,7 +76,7 @@ impl CameraController {
             let velocity_loss_factor = HEIGHT_VELOCITY_AFTER_SECOND.powf(dt);
 
             let new_height = self.height + self.velocity[2] * dt;
-            self.height = clamp(self.min_height, self.max_height, new_height);
+            self.height = clamp(MIN_HEIGHT, MAX_HEIGHT, new_height);
             self.velocity[2] *= velocity_loss_factor;
         });
 
@@ -86,7 +90,7 @@ impl CameraController {
         e.release(|button| { self.set_drag_if_middle(button, false); });
 
         e.mouse_relative(|x, y| if self.dragging {
-            let t = (self.height - self.min_height) / (self.max_height - self.min_height);
+            let t = (self.height - MIN_HEIGHT) / (MAX_HEIGHT - MIN_HEIGHT);
             let drag_distance_per_pixel = linear_interpolate(
                 DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT,
                 DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT,
@@ -96,7 +100,7 @@ impl CameraController {
             self.look_at[0] -= x as f32 * drag_distance_per_pixel;
             self.look_at[1] += y as f32 * drag_distance_per_pixel;
 
-            self.look_at[1] = clamp(-self.world_height, MAX_Y, self.look_at[1]);
+            self.look_at[1] = clamp(MIN_Y, MAX_Y, self.look_at[1]);
         });
     }
 
@@ -131,10 +135,8 @@ impl CameraController {
     }
 
     fn viewing_angle(&self) -> f32 {
-        let max_angle_height =
-            linear_interpolate(self.min_height, self.max_height, MAX_ANGLE_HEIGHT_RATIO);
-        let h = max_angle_height.min(self.height);
-        let t = (h - self.min_height) / (max_angle_height - self.min_height);
+        let h = MAX_ANGLE_HEIGHT.min(self.height);
+        let t = (h - MIN_HEIGHT) / (MAX_ANGLE_HEIGHT - MIN_HEIGHT);
 
         linear_interpolate(MIN_ANGLE, MAX_ANGLE, t)
     }

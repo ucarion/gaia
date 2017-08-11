@@ -57,8 +57,6 @@ fn main() {
 }
 
 const GAIA_WORLD_HEIGHT: f32 = 1000.0;
-const MIN_CAMERA_HEIGHT: f32 = 40.0;
-const MAX_CAMERA_HEIGHT: f32 = 1200.0;
 
 fn run() -> Result<()> {
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
@@ -67,8 +65,7 @@ fn run() -> Result<()> {
         .build()
         .map_err(Error::from)?;
 
-    let mut camera_controller =
-        CameraController::new(GAIA_WORLD_HEIGHT, MIN_CAMERA_HEIGHT, MAX_CAMERA_HEIGHT);
+    let mut camera_controller = CameraController::new();
     let mut gaia_renderer = gaia::Renderer::new(window.factory.clone(), GAIA_WORLD_HEIGHT)
         .chain_err(|| "Could not create renderer")?;
 
