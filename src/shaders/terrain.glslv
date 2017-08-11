@@ -8,7 +8,14 @@ uniform usampler2D t_elevation;
 
 out vec2 v_tex_coord;
 
-const float ELEVATION_SCALE_FACTOR = 200.0;
+// TODO: Find a better name for this variable
+const float ELEVATION_COMPRESSION_FACTOR = 0.0001;
+const float MAX_Z = 30.0;
+
+float elevation_to_z(float elevation) {
+    float t = 1.0 - 1.0 / (1.0 + ELEVATION_COMPRESSION_FACTOR * elevation);
+    return t * MAX_Z;
+}
 
 void main() {
     v_tex_coord = a_coord;
@@ -17,7 +24,7 @@ void main() {
     float y = -a_coord.y * u_width - u_offset.y;
 
     uint elevation = texture(t_elevation, a_coord).r;
-    float z = float(elevation) / ELEVATION_SCALE_FACTOR;
+    float z = elevation_to_z(float(elevation));
 
     vec4 position = vec4(x, y, z, 1.0);
     gl_Position = u_mvp * position;

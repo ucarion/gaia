@@ -26,7 +26,7 @@ pub const MAX_TILE_LEVEL: u8 = 6;
 
 /// `z`-values of vertices cannot be greater than this value. This is used for view frustum
 /// culling.
-pub const Z_UPPER_BOUND: f32 = 100.0;
+pub const Z_UPPER_BOUND: f32 = 30.0;
 
 lazy_static! {
     pub static ref LEVEL0_TILE_WIDTH: f32 = {
