@@ -56,8 +56,6 @@ fn main() {
     }
 }
 
-const GAIA_WORLD_HEIGHT: f32 = 1000.0;
-
 fn run() -> Result<()> {
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
@@ -66,7 +64,7 @@ fn run() -> Result<()> {
         .map_err(Error::from)?;
 
     let mut camera_controller = CameraController::new();
-    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone(), GAIA_WORLD_HEIGHT)
+    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone())
         .chain_err(|| "Could not create renderer")?;
 
     let mut fps_counter = FPSCounter::new();

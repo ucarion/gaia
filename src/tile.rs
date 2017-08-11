@@ -1,3 +1,7 @@
+use collision::{Aabb3, Frustum, Relation};
+
+use constants::{LEVEL0_TILE_WIDTH, Z_UPPER_BOUND};
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct Tile {
     pub level: u8,
@@ -15,8 +19,8 @@ pub enum PositionInParent {
 
 impl Tile {
     /// The displayed width of tiles at a given level. Higher levels cover a greater area.
-    pub fn level_tile_width(level0_tile_width: f32, level: u8) -> f32 {
-        level0_tile_width * 2.0f32.powi(level as i32)
+    pub fn level_tile_width(level: u8) -> f32 {
+        *LEVEL0_TILE_WIDTH * 2.0f32.powi(level as i32)
     }
 
     /// For a given level, the number of tiles across the width of the map.
@@ -28,8 +32,8 @@ impl Tile {
         Self::num_tiles_across_level_width(level) / 2
     }
 
-    pub fn width(&self, level0_tile_width: f32) -> f32 {
-        Self::level_tile_width(level0_tile_width, self.level)
+    pub fn width(&self) -> f32 {
+        Self::level_tile_width(self.level)
     }
 
     pub fn parent(&self) -> Tile {
@@ -62,8 +66,8 @@ pub struct PositionedTile {
 }
 
 impl PositionedTile {
-    pub fn enclosing_point(level0_tile_width: f32, level: u8, x: f32, y: f32) -> PositionedTile {
-        let width = Tile::level_tile_width(level0_tile_width, level);
+    pub fn enclosing_point(level: u8, x: f32, y: f32) -> PositionedTile {
+        let width = Tile::level_tile_width(level);
         let offset_x = (x / width).floor() as i64;
         let offset_y = (-y / width).floor() as i64;
 
@@ -84,11 +88,10 @@ impl PositionedTile {
         }
     }
 
-    pub fn offset(&self, level0_tile_width: f32) -> [f32; 2] {
-        let width = self.tile.width(level0_tile_width);
+    pub fn offset(&self) -> [f32; 2] {
         [
-            self.position[0] as f32 * width,
-            self.position[1] as f32 * width,
+            self.position[0] as f32 * self.tile.width(),
+            self.position[1] as f32 * self.tile.width(),
         ]
     }
 
@@ -100,6 +103,19 @@ impl PositionedTile {
                 self.position[1] / 2,
             ],
         }
+    }
+
+    pub fn is_in_frustum(&self, frustum: &Frustum<f32>) -> bool {
+        let top_left = self.offset();
+        let point1 = [top_left[0], -top_left[1], 0.0];
+        let point2 = [
+            point1[0] + self.tile.width(),
+            point1[1] - self.tile.width(),
+            Z_UPPER_BOUND,
+        ];
+
+        let bounding_box = Aabb3::new(point1.into(), point2.into());
+        frustum.contains(bounding_box) != Relation::Out
     }
 }
 

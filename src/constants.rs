@@ -1,3 +1,9 @@
+use tile::Tile;
+
+/// The world is infinitely long along the east-west direction (x-axis). It will appear along the
+/// y-axis between 0 and `-WORLD_HEIGHT`.
+pub const WORLD_HEIGHT: f32 = 1000.0;
+
 /// In the NOAA GLOBE data, sea level is marked as -500 meters. So that Imagemagick can work with
 /// the data as a grayscale image, the data are offset by 500 so that no negative values appear
 /// anywhere.
@@ -17,3 +23,13 @@ pub const ELEVATION_TILE_WIDTH: u16 = 65;
 /// The highest-detail tiles are of level zero. This is the least-detail, widest-covering level.
 /// The two tiles of this level cover a hemisphere each.
 pub const MAX_TILE_LEVEL: u8 = 6;
+
+/// `z`-values of vertices cannot be greater than this value. This is used for view frustum
+/// culling.
+pub const Z_UPPER_BOUND: f32 = 100.0;
+
+lazy_static! {
+    pub static ref LEVEL0_TILE_WIDTH: f32 = {
+        WORLD_HEIGHT / Tile::num_tiles_across_level_height(0) as f32
+    };
+}

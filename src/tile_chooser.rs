@@ -1,5 +1,6 @@
 use std::cmp;
 
+use collision::Frustum;
 use gfx;
 use lru_cache::LruCache;
 
@@ -15,14 +16,14 @@ use tile::{PositionedTile, PositionInParent, Tile};
 /// The second list is the desired tiles for the current camera position. These should be fetched
 /// and put into cache, so that future calls to this function can use them.
 pub fn choose_tiles<R: gfx::Resources>(
-    level0_tile_width: f32,
     camera_position: [f32; 3],
+    mvp: [[f32; 4]; 4],
     texture_cache: &mut LruCache<Tile, TileTextures<R>>,
 ) -> (Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
     let mut tiles_to_render = vec![];
     let mut tiles_to_fetch = vec![];
 
-    for desired_tile in desired_tiles(level0_tile_width, camera_position) {
+    for desired_tile in desired_tiles(camera_position, mvp) {
         if !texture_cache.contains_key(&desired_tile.tile) {
             tiles_to_fetch.push(desired_tile.tile.clone());
         }
@@ -35,25 +36,26 @@ pub fn choose_tiles<R: gfx::Resources>(
     (tiles_to_render, tiles_to_fetch)
 }
 
-fn desired_tiles(level0_tile_width: f32, camera_position: [f32; 3]) -> Vec<PositionedTile> {
-    let (desired_level, num_tiles_around) = match camera_position[2] {
-        000.0...100.0 => (0, 5),
-        100.0...300.0 => (1, 5),
-        300.0...500.0 => (2, 5),
-        500.0...600.0 => (3, 3),
-        600.0...750.0 => (4, 3),
-        _ => (5, 2),
+fn desired_tiles(camera_position: [f32; 3], mvp: [[f32; 4]; 4]) -> Vec<PositionedTile> {
+    let frustum = Frustum::from_matrix4(mvp.into()).unwrap();
+    let desired_level = match camera_position[2] {
+        0.0...100.0 => 0,
+        100.0...300.0 => 1,
+        300.0...600.0 => 2,
+        600.0...800.0 => 3,
+        800.0...1000.0 => 4,
+        _ => 5,
     };
 
-    let center = PositionedTile::enclosing_point(
-        level0_tile_width,
-        desired_level,
-        camera_position[0],
-        camera_position[1],
-    );
+    let center =
+        PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]);
+
     let center_x = center.position[0];
     let center_y = center.position[1];
 
+    // TODO this is coupled with how the camera controller works; a fully correct solution being
+    // rather complicated, instead just document this behavior? (and export as a constant?)
+    let num_tiles_around = 7;
     let min_x = center_x - num_tiles_around;
     let max_x = center_x + num_tiles_around;
     let min_y = cmp::max(0, center_y - num_tiles_around);
@@ -65,10 +67,11 @@ fn desired_tiles(level0_tile_width: f32, camera_position: [f32; 3]) -> Vec<Posit
     let mut result = vec![];
     for tile_x in min_x..max_x + 1 {
         for tile_y in min_y..max_y + 1 {
-            result.push(PositionedTile::from_level_and_position(
-                desired_level,
-                [tile_x, tile_y],
-            ));
+            let tile = PositionedTile::from_level_and_position(desired_level, [tile_x, tile_y]);
+
+            if tile.is_in_frustum(&frustum) {
+                result.push(tile);
+            }
         }
     }
 

@@ -2,8 +2,11 @@
 extern crate error_chain;
 #[macro_use]
 extern crate gfx;
+#[macro_use]
+extern crate lazy_static;
 
 extern crate byteorder;
+extern crate collision;
 extern crate image;
 extern crate lru_cache;
 
@@ -15,5 +18,6 @@ mod tile;
 mod tile_chooser;
 mod tile_fetcher;
 
+pub use constants::WORLD_HEIGHT;
 pub use errors::{Error, ErrorKind, Result};
 pub use renderer::Renderer;

@@ -1,8 +1,9 @@
 use std::f32::consts::PI;
 
 use cam::Camera;
-use piston::input::{Button, GenericEvent};
+use gaia::WORLD_HEIGHT;
 use piston::input::mouse::MouseButton;
+use piston::input::{Button, GenericEvent};
 
 // Many of these constants only make sense based on values specified in `demo.rs`.
 
@@ -39,7 +40,7 @@ const MAX_ANGLE: f32 = PI * 0.5;
 const MAX_Y: f32 = 0.0;
 
 /// The furthest "down" (south) the camera can be looking at.
-const MIN_Y: f32 = -1000.0;
+const MIN_Y: f32 = -WORLD_HEIGHT;
 
 fn clamp(min: f32, max: f32, n: f32) -> f32 {
     min.max(max.min(n))
