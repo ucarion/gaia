@@ -5,7 +5,8 @@ authors = ["Ulysse Carion <ulysse@ulysse.io>"]
 
 [dependencies]
 byteorder = "1"
-collision = "0.10"
+cgmath = "0.15"
+collision = "0.12"
 error-chain = "0.10"
 fps_counter = "0.2"
 gfx = "0.16"

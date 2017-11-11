@@ -70,8 +70,9 @@ fn get_color_data(tile: &Tile) -> Result<Vec<u8>> {
         tile.y
     );
 
-    let img = image::open(path)
-        .chain_err(|| "Error while opening tile image")?;
+    let img = image::open(path).chain_err(
+        || "Error while opening tile image",
+    )?;
     Ok(img.to_rgba().into_raw())
 }
 
@@ -83,8 +84,9 @@ fn get_elevation_data(tile: &Tile) -> Result<Vec<u16>> {
         tile.y
     );
 
-    let mut file = BufReader::new(File::open(path)
-        .chain_err(|| "Could not tile elevation file")?);
+    let mut file = BufReader::new(File::open(path).chain_err(
+        || "Could not tile elevation file",
+    )?);
 
     let mut buf = Vec::new();
     while let Ok(data_point) = file.read_u16::<LittleEndian>() {

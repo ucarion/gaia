@@ -8,6 +8,7 @@ use tile::Tile;
 use tile_chooser;
 use tile_fetcher;
 
+use cgmath::Matrix4;
 use gfx::traits::FactoryExt;
 use gfx;
 use lru_cache::LruCache;
@@ -23,15 +24,13 @@ gfx_pipeline!(pipe {
     t_color: gfx::TextureSampler<[f32; 4]> = "t_color",
     t_elevation: gfx::TextureSampler<u32> = "t_elevation",
     u_mvp: gfx::Global<[[f32; 4]; 4]> = "u_mvp",
-    u_offset: gfx::Global<[f32; 2]> = "u_offset",
-    u_width: gfx::Global<f32> = "u_width",
     vertex_buffer: gfx::VertexBuffer<Vertex> = (),
 });
 
 pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
     camera_position: Option<[f32; 3]>,
     factory: F,
-    mvp: Option<[[f32; 4]; 4]>,
+    mvp: Option<Matrix4<f32>>,
     pso: gfx::PipelineState<R, pipe::Meta>,
     receive_textures: mpsc::Receiver<(Tile, Result<TileTextureData>)>,
     sampler: gfx::handle::Sampler<R>,
@@ -91,7 +90,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         })
     }
 
-    pub fn set_view_info(&mut self, camera_position: [f32; 3], mvp: [[f32; 4]; 4]) {
+    pub fn set_view_info(&mut self, camera_position: [f32; 3], mvp: Matrix4<f32>) {
         self.camera_position = Some(camera_position);
         self.mvp = Some(mvp);
     }
@@ -108,14 +107,12 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             self.texture_cache.insert(tile, tile_textures);
         }
 
-        let camera_position = self.camera_position
-            .ok_or(Error::from(
-                "camera_position missing; maybe a missing call to set_view_info?",
-            ))?;
-        let mvp = self.mvp
-            .ok_or(Error::from(
-                "mvp missing; maybe a missing call to set_view_info?",
-            ))?;
+        let camera_position = self.camera_position.ok_or(Error::from(
+            "camera_position missing; maybe a missing call to set_view_info?",
+        ))?;
+        let mvp = self.mvp.ok_or(Error::from(
+            "mvp missing; maybe a missing call to set_view_info?",
+        ))?;
 
         // Using the updated cache, get tiles to render and those that should be added to cache
         let (tiles_to_render, tiles_to_fetch) =
@@ -123,9 +120,9 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
         // Queue tiles to fetch for background thread
         for tile_to_fetch in tiles_to_fetch {
-            self.send_tiles
-                .send(tile_to_fetch)
-                .chain_err(|| "Error sending tile to background thread")?;
+            self.send_tiles.send(tile_to_fetch).chain_err(
+                || "Error sending tile to background thread",
+            )?;
         }
 
         for (positioned_tile, index_data) in tiles_to_render {
@@ -139,14 +136,20 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
             let textures = self.texture_cache.get_mut(&positioned_tile.tile).unwrap();
 
+            let offset = Matrix4::from_translation(positioned_tile.offset().into());
+            let scale = Matrix4::from_nonuniform_scale(
+                positioned_tile.tile.width(),
+                -positioned_tile.tile.width(),
+                1.0,
+            );
+            let mvp = mvp * offset * scale;
+
             let data = pipe::Data {
                 o_color: target.clone(),
                 o_depth: stencil.clone(),
                 t_color: (textures.color.clone(), self.sampler.clone()),
                 t_elevation: (textures.elevation.clone(), self.sampler.clone()),
-                u_mvp: mvp,
-                u_offset: positioned_tile.offset(),
-                u_width: positioned_tile.tile.width(),
+                u_mvp: mvp.into(),
                 vertex_buffer: self.vertex_buffer.clone(),
             };
 

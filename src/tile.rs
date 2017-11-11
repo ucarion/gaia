@@ -88,10 +88,11 @@ impl PositionedTile {
         }
     }
 
-    pub fn offset(&self) -> [f32; 2] {
+    pub fn offset(&self) -> [f32; 3] {
         [
             self.position[0] as f32 * self.tile.width(),
-            self.position[1] as f32 * self.tile.width(),
+            -self.position[1] as f32 * self.tile.width(),
+            0.0,
         ]
     }
 
@@ -107,7 +108,7 @@ impl PositionedTile {
 
     pub fn is_in_frustum(&self, frustum: &Frustum<f32>) -> bool {
         let top_left = self.offset();
-        let point1 = [top_left[0], -top_left[1], 0.0];
+        let point1 = [top_left[0], top_left[1], 0.0];
         let point2 = [
             point1[0] + self.tile.width(),
             point1[1] - self.tile.width(),
@@ -115,7 +116,7 @@ impl PositionedTile {
         ];
 
         let bounding_box = Aabb3::new(point1.into(), point2.into());
-        frustum.contains(bounding_box) != Relation::Out
+        frustum.contains(&bounding_box) != Relation::Out
     }
 }
 

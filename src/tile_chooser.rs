@@ -1,5 +1,6 @@
 use std::cmp;
 
+use cgmath::Matrix4;
 use collision::Frustum;
 use gfx;
 use lru_cache::LruCache;
@@ -17,7 +18,7 @@ use tile::{PositionedTile, PositionInParent, Tile};
 /// and put into cache, so that future calls to this function can use them.
 pub fn choose_tiles<R: gfx::Resources>(
     camera_position: [f32; 3],
-    mvp: [[f32; 4]; 4],
+    mvp: Matrix4<f32>,
     texture_cache: &mut LruCache<Tile, TileTextures<R>>,
 ) -> (Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
     let mut tiles_to_render = vec![];
@@ -36,8 +37,8 @@ pub fn choose_tiles<R: gfx::Resources>(
     (tiles_to_render, tiles_to_fetch)
 }
 
-fn desired_tiles(camera_position: [f32; 3], mvp: [[f32; 4]; 4]) -> Vec<PositionedTile> {
-    let frustum = Frustum::from_matrix4(mvp.into()).unwrap();
+fn desired_tiles(camera_position: [f32; 3], mvp: Matrix4<f32>) -> Vec<PositionedTile> {
+    let frustum = Frustum::from_matrix4(mvp).unwrap();
     let desired_level = desired_level(&camera_position);
     let center =
         PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]);

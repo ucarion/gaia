@@ -2,6 +2,7 @@
 extern crate error_chain;
 
 extern crate cam;
+extern crate cgmath;
 extern crate fps_counter;
 extern crate gaia;
 extern crate gfx;
@@ -14,6 +15,7 @@ mod camera_controller;
 use camera_controller::CameraController;
 
 use cam::CameraPerspective;
+use cgmath::Matrix4;
 use fps_counter::FPSCounter;
 use gfx::Device;
 use piston::window::WindowSettings;
@@ -32,12 +34,12 @@ fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
     }.projection()
 }
 
-fn get_mvp(window: &PistonWindow, camera_controller: &CameraController) -> [[f32; 4]; 4] {
+fn get_mvp(window: &PistonWindow, camera_controller: &CameraController) -> Matrix4<f32> {
     cam::model_view_projection(
         vecmath::mat4_id(),
         camera_controller.view_matrix(),
         get_projection(window),
-    )
+    ).into()
 }
 
 fn main() {
@@ -64,8 +66,9 @@ fn run() -> Result<()> {
         .map_err(Error::from)?;
 
     let mut camera_controller = CameraController::new();
-    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone())
-        .chain_err(|| "Could not create renderer")?;
+    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone()).chain_err(
+        || "Could not create renderer",
+    )?;
 
     let mut fps_counter = FPSCounter::new();
     let mut fps = 0;
@@ -83,9 +86,10 @@ fn run() -> Result<()> {
         camera_controller.event(&e);
 
         window.draw_3d(&e, |window| {
-            window
-                .encoder
-                .clear(&window.output_color, [0.3, 0.3, 0.3, 1.0]);
+            window.encoder.clear(
+                &window.output_color,
+                [0.3, 0.3, 0.3, 1.0],
+            );
             window.encoder.clear_depth(&window.output_stencil, 1.0);
 
             gaia_renderer.set_view_info(
@@ -110,7 +114,11 @@ fn run() -> Result<()> {
         window.draw_2d(&e, |context, graphics| {
             let camera_height = camera_controller.camera_position()[2];
             text::Text::new_color([0.0, 0.0, 0.0, 1.0], 10).draw(
-                &format!("FPS: {} - Camera height: {}", fps, camera_height),
+                &format!(
+                    "FPS: {} - Camera height: {}",
+                    fps,
+                    camera_height
+                ),
                 &mut glyphs,
                 &context.draw_state,
                 context.transform.trans(10.0, 10.0),
