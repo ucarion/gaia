@@ -38,15 +38,7 @@ pub fn choose_tiles<R: gfx::Resources>(
 
 fn desired_tiles(camera_position: [f32; 3], mvp: [[f32; 4]; 4]) -> Vec<PositionedTile> {
     let frustum = Frustum::from_matrix4(mvp.into()).unwrap();
-    let desired_level = match camera_position[2] {
-        0.0...100.0 => 0,
-        100.0...300.0 => 1,
-        300.0...600.0 => 2,
-        600.0...800.0 => 3,
-        800.0...1000.0 => 4,
-        _ => 5,
-    };
-
+    let desired_level = desired_level(&camera_position);
     let center =
         PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]);
 
@@ -76,6 +68,24 @@ fn desired_tiles(camera_position: [f32; 3], mvp: [[f32; 4]; 4]) -> Vec<Positione
     }
 
     result
+}
+
+fn desired_level(camera_position: &[f32; 3]) -> u8 {
+    let z = camera_position[2];
+
+    if z < 100.0 {
+        0
+    } else if z < 300.0 {
+        1
+    } else if z < 600.0 {
+        2
+    } else if z < 800.0 {
+        3
+    } else if z < 1000.0 {
+        4
+    } else {
+        5
+    }
 }
 
 fn get_covering_tile<R: gfx::Resources>(
