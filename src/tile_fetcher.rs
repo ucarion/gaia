@@ -1,12 +1,12 @@
 use std::sync::mpsc;
 
 use errors::*;
-use texture_getter::TileTextureData;
+use asset_getter::TileAssetData;
 use tile::Tile;
 
 pub fn fetch_tiles(
     receive_tiles: mpsc::Receiver<Tile>,
-    send_textures: mpsc::Sender<(Tile, Result<TileTextureData>)>,
+    send_textures: mpsc::Sender<(Tile, Result<TileAssetData>)>,
 ) {
     let mut jobs = Vec::new();
 
@@ -23,7 +23,7 @@ pub fn fetch_tiles(
         }
 
         let tile = jobs.pop().unwrap();
-        let textures = TileTextureData::new(&tile);
+        let textures = TileAssetData::new(&tile);
         send_textures.send((tile, textures)).unwrap();
     }
 }

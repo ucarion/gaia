@@ -14,10 +14,10 @@ extern crate image;
 extern crate lru_cache;
 extern crate serde_json;
 
+mod asset_getter;
 mod constants;
 mod errors;
 mod renderer;
-mod texture_getter;
 mod tile;
 mod tile_chooser;
 mod tile_fetcher;

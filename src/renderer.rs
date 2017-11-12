@@ -5,7 +5,7 @@ use std::thread;
 
 use constants::ELEVATION_TILE_WIDTH;
 use errors::*;
-use texture_getter::{TileTextures, TileTextureData};
+use asset_getter::{TileAssets, TileAssetData};
 use tile::Tile;
 use tile_chooser;
 use tile_fetcher;
@@ -33,16 +33,16 @@ gfx_pipeline!(pipe {
 });
 
 pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
+    asset_cache: LruCache<Tile, TileAssets<R>>,
     camera_position: Option<[f32; 3]>,
     draping_renderer: DrapingRenderer<R>,
     factory: F,
     mvp: Option<Matrix4<f32>>,
     polygon_point_data: PolygonPointData,
     pso: gfx::PipelineState<R, pipe::Meta>,
-    receive_textures: mpsc::Receiver<(Tile, Result<TileTextureData>)>,
+    receive_textures: mpsc::Receiver<(Tile, Result<TileAssetData>)>,
     sampler: gfx::handle::Sampler<R>,
     send_tiles: mpsc::Sender<Tile>,
-    texture_cache: LruCache<Tile, TileTextures<R>>,
     vertex_buffer: gfx::handle::Buffer<R, Vertex>,
 }
 
@@ -72,7 +72,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         }
 
         let vertex_buffer = factory.create_vertex_buffer(&vertex_data);
-        let texture_cache = LruCache::new(2048);
+        let asset_cache = LruCache::new(2048);
 
         let polygon_point_data = serde_json::from_reader(BufReader::new(
             File::open("assets/generated/polygons.json").chain_err(
@@ -91,6 +91,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             .chain_err(|| "Error creating texture loader thread")?;
 
         Ok(Renderer {
+            asset_cache: asset_cache,
             camera_position: None,
             draping_renderer: DrapingRenderer::new(&mut factory),
             factory: factory,
@@ -100,7 +101,6 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             receive_textures: receive_textures,
             sampler: sampler,
             send_tiles: send_tiles,
-            texture_cache: texture_cache,
             vertex_buffer: vertex_buffer,
         })
     }
@@ -118,8 +118,8 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
     ) -> Result<()> {
         // Get tiles loaded in background thread, and put them in the cache
         for (tile, tile_texture_data) in self.receive_textures.try_iter() {
-            let tile_textures = tile_texture_data?.create_textures(&mut self.factory)?;
-            self.texture_cache.insert(tile, tile_textures);
+            let assets = tile_texture_data?.create_assets(&mut self.factory)?;
+            self.asset_cache.insert(tile, assets);
         }
 
         let camera_position = self.camera_position.ok_or(Error::from(
@@ -131,7 +131,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
         // Using the updated cache, get tiles to render and those that should be added to cache
         let (tiles_to_render, tiles_to_fetch) =
-            tile_chooser::choose_tiles(camera_position, mvp, &mut self.texture_cache);
+            tile_chooser::choose_tiles(camera_position, mvp, &mut self.asset_cache);
 
         // Queue tiles to fetch for background thread
         for tile_to_fetch in tiles_to_fetch {
@@ -149,7 +149,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
                 buffer: self.factory.create_index_buffer(index_data.as_slice()),
             };
 
-            let textures = self.texture_cache.get_mut(&positioned_tile.tile).unwrap();
+            let textures = self.asset_cache.get_mut(&positioned_tile.tile).unwrap();
 
             let offset = Matrix4::from_translation(positioned_tile.offset().into());
             let scale = Matrix4::from_nonuniform_scale(

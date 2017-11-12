@@ -6,7 +6,7 @@ use gfx;
 use lru_cache::LruCache;
 
 use constants::{ELEVATION_TILE_WIDTH, MAX_TILE_LEVEL};
-use texture_getter::TileTextures;
+use asset_getter::TileAssets;
 use tile::{PositionedTile, PositionInParent, Tile};
 
 /// Gets tiles that can be rendered immediately, and tiles that should be fetched.
@@ -19,7 +19,7 @@ use tile::{PositionedTile, PositionInParent, Tile};
 pub fn choose_tiles<R: gfx::Resources>(
     camera_position: [f32; 3],
     mvp: Matrix4<f32>,
-    texture_cache: &mut LruCache<Tile, TileTextures<R>>,
+    texture_cache: &mut LruCache<Tile, TileAssets<R>>,
 ) -> (Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
     let mut tiles_to_render = vec![];
     let mut tiles_to_fetch = vec![];
@@ -88,7 +88,7 @@ fn desired_level(camera_position: &[f32; 3]) -> u8 {
 }
 
 fn get_covering_tile<R: gfx::Resources>(
-    cache: &mut LruCache<Tile, TileTextures<R>>,
+    cache: &mut LruCache<Tile, TileAssets<R>>,
     tile_to_cover: PositionedTile,
 ) -> Option<(PositionedTile, Vec<u16>)> {
     find_parent_in_cache(tile_to_cover, cache).and_then(|(parent, quadrant_positions)| {
@@ -126,7 +126,7 @@ fn get_covering_tile<R: gfx::Resources>(
 
 fn find_parent_in_cache<R: gfx::Resources>(
     mut tile: PositionedTile,
-    cache: &mut LruCache<Tile, TileTextures<R>>,
+    cache: &mut LruCache<Tile, TileAssets<R>>,
 ) -> Option<(PositionedTile, Vec<PositionInParent>)> {
     let mut quadrant_positions = vec![];
 
