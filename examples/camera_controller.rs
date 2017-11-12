@@ -37,10 +37,10 @@ const MIN_ANGLE: f32 = PI * 0.3;
 const MAX_ANGLE: f32 = PI * 0.5;
 
 /// The furthest "up" (north) the camera can be looking at.
-const MAX_Y: f32 = 0.0;
+const MAX_Y: f32 = WORLD_HEIGHT;
 
 /// The furthest "down" (south) the camera can be looking at.
-const MIN_Y: f32 = -WORLD_HEIGHT;
+const MIN_Y: f32 = 0.0;
 
 fn clamp(min: f32, max: f32, n: f32) -> f32 {
     min.max(max.min(n))

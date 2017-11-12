@@ -1,6 +1,6 @@
 use collision::{Aabb3, Frustum, Relation};
 
-use constants::{LEVEL0_TILE_WIDTH, Z_UPPER_BOUND};
+use constants::{LEVEL0_TILE_WIDTH, Z_UPPER_BOUND, WORLD_HEIGHT};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct Tile {
@@ -68,10 +68,10 @@ pub struct PositionedTile {
 impl PositionedTile {
     pub fn enclosing_point(level: u8, x: f32, y: f32) -> PositionedTile {
         let width = Tile::level_tile_width(level);
-        let offset_x = (x / width).floor() as i64;
-        let offset_y = (-y / width).floor() as i64;
+        let offset_x = (x / width).floor();
+        let offset_y = Tile::num_tiles_across_level_height(level) - (y / width).floor() as u8;
 
-        Self::from_level_and_position(level, [offset_x, offset_y])
+        Self::from_level_and_position(level, [offset_x as i64, offset_y as i64])
     }
 
     pub fn from_level_and_position(level: u8, position: [i64; 2]) -> PositionedTile {
@@ -91,7 +91,7 @@ impl PositionedTile {
     pub fn offset(&self) -> [f32; 3] {
         [
             self.position[0] as f32 * self.tile.width(),
-            -self.position[1] as f32 * self.tile.width(),
+            WORLD_HEIGHT - self.position[1] as f32 * self.tile.width(),
             0.0,
         ]
     }
