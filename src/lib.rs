@@ -8,6 +8,7 @@ extern crate lazy_static;
 extern crate byteorder;
 extern crate cgmath;
 extern crate collision;
+extern crate gfx_draping;
 extern crate image;
 extern crate lru_cache;
 

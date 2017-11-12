@@ -11,6 +11,7 @@ use tile_fetcher;
 use cgmath::Matrix4;
 use gfx::traits::FactoryExt;
 use gfx;
+use gfx_draping::{DrapingRenderer, DrapeablePolygon};
 use lru_cache::LruCache;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -33,6 +34,7 @@ pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
     mvp: Option<Matrix4<f32>>,
     pso: gfx::PipelineState<R, pipe::Meta>,
     receive_textures: mpsc::Receiver<(Tile, Result<TileTextureData>)>,
+    draping_renderer: DrapingRenderer<R>,
     sampler: gfx::handle::Sampler<R>,
     send_tiles: mpsc::Sender<Tile>,
     texture_cache: LruCache<Tile, TileTextures<R>>,
@@ -79,6 +81,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
         Ok(Renderer {
             camera_position: None,
+            draping_renderer: DrapingRenderer::new(&mut factory),
             factory: factory,
             mvp: None,
             pso: pso,
@@ -155,6 +158,21 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
             encoder.draw(&slice, &self.pso, &data);
         }
+
+        let polygon = DrapeablePolygon::new_from_points(
+            &mut self.factory,
+            &[(0.4, 0.4), (0.6, 0.4), (0.6, 0.6), (0.4, 0.6), (0.4, 0.4)],
+            &[(0.3, 0.7), (0.3, 0.7), (-1.0, 1.0)],
+        );
+
+        self.draping_renderer.render(
+            encoder,
+            target,
+            stencil,
+            mvp.into(),
+            [1.0, 0.0, 0.0, 0.5],
+            &polygon,
+        );
 
         Ok(())
     }
