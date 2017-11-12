@@ -1,6 +1,6 @@
 use collision::{Aabb3, Frustum, Relation};
 
-use constants::{LEVEL0_TILE_WIDTH, Z_UPPER_BOUND, WORLD_HEIGHT};
+use constants::{LEVEL0_TILE_WIDTH, Z_UPPER_BOUND};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct Tile {
@@ -91,7 +91,7 @@ impl PositionedTile {
     pub fn offset(&self) -> [f32; 3] {
         [
             self.position[0] as f32 * self.tile.width(),
-            WORLD_HEIGHT - self.position[1] as f32 * self.tile.width(),
+            1.0 - self.position[1] as f32 * self.tile.width(),
             0.0,
         ]
     }

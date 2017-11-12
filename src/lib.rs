@@ -19,6 +19,5 @@ mod tile;
 mod tile_chooser;
 mod tile_fetcher;
 
-pub use constants::WORLD_HEIGHT;
 pub use errors::{Error, ErrorKind, Result};
 pub use renderer::Renderer;

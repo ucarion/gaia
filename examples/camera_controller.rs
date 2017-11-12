@@ -1,7 +1,6 @@
 use std::f32::consts::PI;
 
 use cam::Camera;
-use gaia::WORLD_HEIGHT;
 use piston::input::mouse::MouseButton;
 use piston::input::{Button, GenericEvent};
 
@@ -12,23 +11,23 @@ use piston::input::{Button, GenericEvent};
 const HEIGHT_VELOCITY_AFTER_SECOND: f32 = 0.01;
 
 /// Determines how quickly height changes the instant after a scroll event.
-const INITIAL_HEIGHT_VELOCITY: f32 = 100.0;
+const INITIAL_HEIGHT_VELOCITY: f32 = 0.05;
 
 /// When the user drags the mouse for one pixel with the camera at minimum height, this is the
 /// resulting change in `look_at`.
-const DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT: f32 = 0.2;
+const DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT: f32 = 0.0001;
 
 /// Same as `DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT`, but when the camera is at maximum height.
-const DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT: f32 = 5.0;
+const DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT: f32 = 0.002;
 
 /// The lowest the camera can go.
-const MIN_HEIGHT: f32 = 40.0;
+const MIN_HEIGHT: f32 = 0.05;
 
 /// The highest the camera can go.
-const MAX_HEIGHT: f32 = 1200.0;
+const MAX_HEIGHT: f32 = 1.0;
 
 /// The height above which the viewing angle will always be `MAX_ANGLE`.
-const MAX_ANGLE_HEIGHT: f32 = 250.0;
+const MAX_ANGLE_HEIGHT: f32 = 0.1;
 
 /// The viewing angle when at `MIN_HEIGHT`.
 const MIN_ANGLE: f32 = PI * 0.3;
@@ -37,7 +36,7 @@ const MIN_ANGLE: f32 = PI * 0.3;
 const MAX_ANGLE: f32 = PI * 0.5;
 
 /// The furthest "up" (north) the camera can be looking at.
-const MAX_Y: f32 = WORLD_HEIGHT;
+const MAX_Y: f32 = 1.0;
 
 /// The furthest "down" (south) the camera can be looking at.
 const MIN_Y: f32 = 0.0;

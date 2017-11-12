@@ -74,18 +74,16 @@ fn desired_tiles(camera_position: [f32; 3], mvp: Matrix4<f32>) -> Vec<Positioned
 fn desired_level(camera_position: &[f32; 3]) -> u8 {
     let z = camera_position[2];
 
-    if z < 100.0 {
+    if z < 0.1 {
         0
-    } else if z < 300.0 {
+    } else if z < 0.2 {
         1
-    } else if z < 600.0 {
+    } else if z < 0.5 {
         2
-    } else if z < 800.0 {
+    } else if z < 0.7 {
         3
-    } else if z < 1000.0 {
-        4
     } else {
-        5
+        4
     }
 }
 

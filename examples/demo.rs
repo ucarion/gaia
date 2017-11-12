@@ -28,8 +28,8 @@ fn get_projection(window: &PistonWindow) -> [[f32; 4]; 4] {
 
     CameraPerspective {
         fov: 45.0,
-        near_clip: 0.1,
-        far_clip: 10000.0,
+        near_clip: 0.001,
+        far_clip: 100.0,
         aspect_ratio: (draw_size.width as f32) / (draw_size.height as f32),
     }.projection()
 }

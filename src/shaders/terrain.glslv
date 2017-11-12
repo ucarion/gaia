@@ -8,7 +8,9 @@ out vec2 v_tex_coord;
 
 // TODO: Find a better name for this variable
 const float ELEVATION_COMPRESSION_FACTOR = 0.0001;
-const float MAX_Z = 30.0;
+
+// This needs to be the same value as in constants.rs
+const float MAX_Z = 0.03;
 
 float elevation_to_z(float elevation) {
     float t = 1.0 - 1.0 / (1.0 + ELEVATION_COMPRESSION_FACTOR * elevation);
