@@ -1,14 +1,9 @@
+use std::collections::BTreeMap;
+use std::f32;
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::mpsc;
 use std::thread;
-
-use constants::ELEVATION_TILE_WIDTH;
-use errors::*;
-use asset_getter::{TileAssets, TileAssetData};
-use tile::Tile;
-use tile_chooser;
-use tile_fetcher;
 
 use cgmath::Matrix4;
 use gaia_assetgen::PolygonPointData;
@@ -17,6 +12,13 @@ use gfx;
 use gfx_draping::{DrapingRenderer, DrapeablePolygon};
 use lru_cache::LruCache;
 use serde_json;
+
+use constants::ELEVATION_TILE_WIDTH;
+use errors::*;
+use asset_getter::{TileAssets, TileAssetData};
+use tile::Tile;
+use tile_chooser;
+use tile_fetcher;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 gfx_vertex_struct!(Vertex {
@@ -140,6 +142,8 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             )?;
         }
 
+        let mut polygons_to_render = BTreeMap::new();
+
         for (positioned_tile, index_data) in tiles_to_render {
             let slice = gfx::Slice {
                 start: 0,
@@ -149,7 +153,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
                 buffer: self.factory.create_index_buffer(index_data.as_slice()),
             };
 
-            let textures = self.asset_cache.get_mut(&positioned_tile.tile).unwrap();
+            let tile_assets = self.asset_cache.get_mut(&positioned_tile.tile).unwrap();
 
             let offset = Matrix4::from_translation(positioned_tile.offset().into());
             let scale = Matrix4::from_nonuniform_scale(
@@ -162,35 +166,52 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             let data = pipe::Data {
                 o_color: target.clone(),
                 o_depth: stencil.clone(),
-                t_color: (textures.color.clone(), self.sampler.clone()),
-                t_elevation: (textures.elevation.clone(), self.sampler.clone()),
+                t_color: (tile_assets.color.clone(), self.sampler.clone()),
+                t_elevation: (tile_assets.elevation.clone(), self.sampler.clone()),
                 u_mvp: mvp.into(),
                 vertex_buffer: self.vertex_buffer.clone(),
             };
 
             encoder.draw(&slice, &self.pso, &data);
-        }
 
-        for polygon in &self.polygon_point_data.polygons {
-            if polygon.properties["ADMIN"] == "France" {
-                let polygon = DrapeablePolygon::new_from_points(
-                    &mut self.factory,
-                    &polygon.levels[0],
-                    &[(0.0, 2.0), (0.0, 2.0), (-1.0, 1.0)],
-                );
+            for polygon_id in &tile_assets.metadata.polygons {
+                let z_bounds = polygons_to_render.entry(*polygon_id).or_insert((
+                    f32::INFINITY,
+                    f32::NEG_INFINITY,
+                ));
 
-                self.draping_renderer.render(
-                    encoder,
-                    target.clone(),
-                    stencil.clone(),
-                    mvp.into(),
-                    [0.0, 1.0, 1.0, 0.2],
-                    &polygon,
-                );
+                z_bounds.0 = z_bounds.0.min(tile_assets.metadata.min_elevation as f32);
+                z_bounds.1 = z_bounds.1.max(tile_assets.metadata.max_elevation as f32);
             }
         }
 
+        for (polygon_id, (min_z, max_z)) in polygons_to_render {
+            let polygon = &self.polygon_point_data.polygons[polygon_id as usize];
+
+            let drapeable_polygon = DrapeablePolygon::new_from_points(
+                &mut self.factory,
+                &polygon.levels[5],
+                &[
+                    polygon.bounding_box[0],
+                    polygon.bounding_box[1],
+                    (elevation_to_z(min_z) - 0.01, elevation_to_z(max_z) + 0.01),
+                ],
+            );
+            self.draping_renderer.render(
+                encoder,
+                target.clone(),
+                stencil.clone(),
+                mvp.into(),
+                [0.0, 1.0, 1.0, 0.2],
+                &drapeable_polygon,
+            );
+        }
 
         Ok(())
     }
+}
+
+fn elevation_to_z(elevation: f32) -> f32 {
+    let t = 1.0 - 1.0 / (1.0 + 0.0001 * elevation);
+    return t * 0.03
 }
