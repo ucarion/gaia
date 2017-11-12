@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::BufReader;
 use std::sync::mpsc;
 use std::thread;
 
@@ -9,10 +11,12 @@ use tile_chooser;
 use tile_fetcher;
 
 use cgmath::Matrix4;
+use gaia_assetgen::PolygonPointData;
 use gfx::traits::FactoryExt;
 use gfx;
 use gfx_draping::{DrapingRenderer, DrapeablePolygon};
 use lru_cache::LruCache;
+use serde_json;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 gfx_vertex_struct!(Vertex {
@@ -30,11 +34,12 @@ gfx_pipeline!(pipe {
 
 pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
     camera_position: Option<[f32; 3]>,
+    draping_renderer: DrapingRenderer<R>,
     factory: F,
     mvp: Option<Matrix4<f32>>,
+    polygon_point_data: PolygonPointData,
     pso: gfx::PipelineState<R, pipe::Meta>,
     receive_textures: mpsc::Receiver<(Tile, Result<TileTextureData>)>,
-    draping_renderer: DrapingRenderer<R>,
     sampler: gfx::handle::Sampler<R>,
     send_tiles: mpsc::Sender<Tile>,
     texture_cache: LruCache<Tile, TileTextures<R>>,
@@ -69,6 +74,12 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         let vertex_buffer = factory.create_vertex_buffer(&vertex_data);
         let texture_cache = LruCache::new(2048);
 
+        let polygon_point_data = serde_json::from_reader(BufReader::new(
+            File::open("assets/generated/polygons.json").chain_err(
+                || "Error opening polygons.json",
+            )?,
+        )).chain_err(|| "Error parsing polygons.json")?;
+
         let (send_tiles, receive_tiles) = mpsc::channel::<Tile>();
         let (send_textures, receive_textures) = mpsc::channel();
 
@@ -84,6 +95,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             draping_renderer: DrapingRenderer::new(&mut factory),
             factory: factory,
             mvp: None,
+            polygon_point_data: polygon_point_data,
             pso: pso,
             receive_textures: receive_textures,
             sampler: sampler,
@@ -159,20 +171,25 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
             encoder.draw(&slice, &self.pso, &data);
         }
 
-        let polygon = DrapeablePolygon::new_from_points(
-            &mut self.factory,
-            &[(0.4, 0.4), (0.6, 0.4), (0.6, 0.6), (0.4, 0.6), (0.4, 0.4)],
-            &[(0.3, 0.7), (0.3, 0.7), (-1.0, 1.0)],
-        );
+        for polygon in &self.polygon_point_data.polygons {
+            if polygon.properties["ADMIN"] == "France" {
+                let polygon = DrapeablePolygon::new_from_points(
+                    &mut self.factory,
+                    &polygon.levels[0],
+                    &[(0.0, 2.0), (0.0, 2.0), (-1.0, 1.0)],
+                );
 
-        self.draping_renderer.render(
-            encoder,
-            target,
-            stencil,
-            mvp.into(),
-            [1.0, 0.0, 0.0, 0.5],
-            &polygon,
-        );
+                self.draping_renderer.render(
+                    encoder,
+                    target.clone(),
+                    stencil.clone(),
+                    mvp.into(),
+                    [0.0, 1.0, 1.0, 0.2],
+                    &polygon,
+                );
+            }
+        }
+
 
         Ok(())
     }

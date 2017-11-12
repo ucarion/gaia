@@ -8,9 +8,11 @@ extern crate lazy_static;
 extern crate byteorder;
 extern crate cgmath;
 extern crate collision;
+extern crate gaia_assetgen;
 extern crate gfx_draping;
 extern crate image;
 extern crate lru_cache;
+extern crate serde_json;
 
 mod constants;
 mod errors;
