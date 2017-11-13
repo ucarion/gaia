@@ -36,6 +36,7 @@ gfx_pipeline!(pipe {
 
 pub struct Renderer<R: gfx::Resources, F: gfx::Factory<R>> {
     asset_cache: LruCache<Tile, TileAssets<R>>,
+    polygon_cache: LruCache<(u64, u8), DrapeablePolygon<R>>,
     camera_position: Option<[f32; 3]>,
     draping_renderer: DrapingRenderer<R>,
     factory: F,
@@ -94,6 +95,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
         Ok(Renderer {
             asset_cache: asset_cache,
+            polygon_cache: LruCache::new(4096),
             camera_position: None,
             draping_renderer: DrapingRenderer::new(&mut factory),
             factory: factory,
@@ -132,7 +134,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         ))?;
 
         // Using the updated cache, get tiles to render and those that should be added to cache
-        let (tiles_to_render, tiles_to_fetch) =
+        let (level_of_detail, tiles_to_render, tiles_to_fetch) =
             tile_chooser::choose_tiles(camera_position, mvp, &mut self.asset_cache);
 
         // Queue tiles to fetch for background thread
@@ -186,22 +188,38 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
         }
 
         for (polygon_id, (min_z, max_z)) in polygons_to_render {
+            let cache_key = (polygon_id, level_of_detail);
             let polygon = &self.polygon_point_data.polygons[polygon_id as usize];
+            let polygon_points = &polygon.levels[level_of_detail as usize];
 
-            let drapeable_polygon = DrapeablePolygon::new_from_points(
-                &mut self.factory,
-                &polygon.levels[5],
-                &[
-                    polygon.bounding_box[0],
-                    polygon.bounding_box[1],
-                    (elevation_to_z(min_z) - 0.01, elevation_to_z(max_z) + 0.01),
-                ],
-            );
+            // Due to polygon simplification, some polygons might be trivial, empty ones. These can
+            // be skipped, since rendering them does nothing.
+            if polygon_points.is_empty() {
+                continue;
+            }
+
+            if !self.polygon_cache.contains_key(&cache_key) {
+                self.polygon_cache.insert(
+                    cache_key,
+                    DrapeablePolygon::new_from_points(
+                        &mut self.factory,
+                        polygon_points,
+                        &[polygon.bounding_box[0], polygon.bounding_box[1], (0.0, 1.0)],
+                    ),
+                );
+            }
+
+            let (min_z, max_z) = (elevation_to_z(min_z) - 0.01, elevation_to_z(max_z) + 0.01);
+
+            let drapeable_polygon = self.polygon_cache.get_mut(&cache_key).unwrap();
+            let transform_polygon = Matrix4::from_nonuniform_scale(1.0, 1.0, (max_z - min_z)) *
+                Matrix4::from_translation([0.0, 0.0, min_z].into());
+
             self.draping_renderer.render(
                 encoder,
                 target.clone(),
                 stencil.clone(),
-                mvp.into(),
+                (mvp * transform_polygon).into(),
                 [0.0, 1.0, 1.0, 0.2],
                 &drapeable_polygon,
             );
@@ -213,5 +231,5 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> Renderer<R, F> {
 
 fn elevation_to_z(elevation: f32) -> f32 {
     let t = 1.0 - 1.0 / (1.0 + 0.0001 * elevation);
-    return t * 0.03
+    return t * 0.03;
 }

@@ -11,16 +11,16 @@ use tile::{PositionedTile, PositionInParent, Tile};
 
 /// Gets tiles that can be rendered immediately, and tiles that should be fetched.
 ///
-/// The first list contains pairs of positioned tiles, and the indices to use for that tile. These
-/// tiles are already in cache, and can be rendered immediately.
+/// `tiles_to_render` contains pairs of positioned tiles, and the indices to use for that tile.
+/// These tiles are already in cache, and can be rendered immediately.
 ///
-/// The second list is the desired tiles for the current camera position. These should be fetched
-/// and put into cache, so that future calls to this function can use them.
+/// `tiles_to_fetch` is the desired tiles for the current camera position that are not in cache.
+/// These should be fetched and put into cache, so that future calls to this function can use them.
 pub fn choose_tiles<R: gfx::Resources>(
     camera_position: [f32; 3],
     mvp: Matrix4<f32>,
     texture_cache: &mut LruCache<Tile, TileAssets<R>>,
-) -> (Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
+) -> (u8, Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
     let mut tiles_to_render = vec![];
     let mut tiles_to_fetch = vec![];
 
@@ -34,7 +34,11 @@ pub fn choose_tiles<R: gfx::Resources>(
         }
     }
 
-    (tiles_to_render, tiles_to_fetch)
+    (
+        desired_level(&camera_position),
+        tiles_to_render,
+        tiles_to_fetch,
+    )
 }
 
 fn desired_tiles(camera_position: [f32; 3], mvp: Matrix4<f32>) -> Vec<PositionedTile> {
