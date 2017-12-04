@@ -10,6 +10,7 @@ extern crate cgmath;
 extern crate collision;
 extern crate gaia_assetgen;
 extern crate gfx_draping;
+extern crate hsl;
 extern crate image;
 extern crate lru_cache;
 extern crate serde_json;

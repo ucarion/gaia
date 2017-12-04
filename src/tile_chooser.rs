@@ -52,7 +52,7 @@ fn desired_tiles(camera_position: [f32; 3], mvp: Matrix4<f32>) -> Vec<Positioned
 
     // TODO this is coupled with how the camera controller works; a fully correct solution being
     // rather complicated, instead just document this behavior? (and export as a constant?)
-    let num_tiles_around = 7;
+    let num_tiles_around = 5;
     let min_x = center_x - num_tiles_around;
     let max_x = center_x + num_tiles_around;
     let min_y = cmp::max(0, center_y - num_tiles_around);
