@@ -134,6 +134,14 @@ impl CameraController {
         [self.look_at[0], self.look_at[1] - offset_y, self.height]
     }
 
+    pub fn camera_height(&self) -> f32 {
+        self.height
+    }
+
+    pub fn look_at(&self) -> [f32; 2] {
+        self.look_at.clone()
+    }
+
     fn viewing_angle(&self) -> f32 {
         let h = MAX_ANGLE_HEIGHT.min(self.height);
         let t = (h - MIN_HEIGHT) / (MAX_ANGLE_HEIGHT - MIN_HEIGHT);

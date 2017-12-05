@@ -18,10 +18,11 @@ extern crate serde_json;
 mod asset_getter;
 mod constants;
 mod errors;
+mod render;
 mod renderer;
 mod tile;
 mod tile_chooser;
 mod tile_fetcher;
 
 pub use errors::{Error, ErrorKind, Result};
-pub use renderer::Renderer;
+pub use render::Renderer;

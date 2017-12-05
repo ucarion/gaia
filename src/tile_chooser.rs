@@ -1,6 +1,6 @@
 use std::cmp;
 
-use cgmath::Matrix4;
+use cgmath::{Matrix4, Vector2};
 use collision::Frustum;
 use gfx;
 use lru_cache::LruCache;
@@ -17,14 +17,17 @@ use tile::{PositionedTile, PositionInParent, Tile};
 /// `tiles_to_fetch` is the desired tiles for the current camera position that are not in cache.
 /// These should be fetched and put into cache, so that future calls to this function can use them.
 pub fn choose_tiles<R: gfx::Resources>(
-    camera_position: [f32; 3],
-    mvp: Matrix4<f32>,
     texture_cache: &mut LruCache<Tile, TileAssets<R>>,
+    mvp: Matrix4<f32>,
+    look_at: Vector2<f32>,
+    camera_height: f32,
 ) -> (u8, Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
     let mut tiles_to_render = vec![];
     let mut tiles_to_fetch = vec![];
 
-    for desired_tile in desired_tiles(camera_position, mvp) {
+    let desired_level = desired_level(camera_height);
+
+    for desired_tile in desired_tiles(desired_level, look_at, mvp) {
         if !texture_cache.contains_key(&desired_tile.tile) {
             tiles_to_fetch.push(desired_tile.tile.clone());
         }
@@ -35,17 +38,16 @@ pub fn choose_tiles<R: gfx::Resources>(
     }
 
     (
-        desired_level(&camera_position),
+        desired_level,
         tiles_to_render,
         tiles_to_fetch,
     )
 }
 
-fn desired_tiles(camera_position: [f32; 3], mvp: Matrix4<f32>) -> Vec<PositionedTile> {
+fn desired_tiles(desired_level: u8, look_at: Vector2<f32>, mvp: Matrix4<f32>) -> Vec<PositionedTile> {
     let frustum = Frustum::from_matrix4(mvp).unwrap();
-    let desired_level = desired_level(&camera_position);
     let center =
-        PositionedTile::enclosing_point(desired_level, camera_position[0], camera_position[1]);
+        PositionedTile::enclosing_point(desired_level, look_at[0], look_at[1]);
 
     let center_x = center.position[0];
     let center_y = center.position[1];
@@ -75,16 +77,14 @@ fn desired_tiles(camera_position: [f32; 3], mvp: Matrix4<f32>) -> Vec<Positioned
     result
 }
 
-fn desired_level(camera_position: &[f32; 3]) -> u8 {
-    let z = camera_position[2];
-
-    if z < 0.1 {
+fn desired_level(camera_height: f32) -> u8 {
+    if camera_height < 0.1 {
         0
-    } else if z < 0.2 {
+    } else if camera_height < 0.2 {
         1
-    } else if z < 0.5 {
+    } else if camera_height < 0.5 {
         2
-    } else if z < 0.7 {
+    } else if camera_height < 0.7 {
         3
     } else {
         4

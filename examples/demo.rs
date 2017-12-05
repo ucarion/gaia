@@ -77,10 +77,10 @@ fn run() -> Result<()> {
     let mut glyphs = Glyphs::new("assets/fonts/FiraSans-Regular.ttf", window.factory.clone())
         .map_err(|_err| Error::from("glyph error"))?;
 
-    gaia_renderer.set_view_info(
-        camera_controller.camera_position(),
-        get_mvp(&window, &camera_controller),
-    );
+    // gaia_renderer.set_view_info(
+    //     camera_controller.camera_position(),
+    //     get_mvp(&window, &camera_controller),
+    // );
 
     while let Some(e) = window.next() {
         camera_controller.event(&e);
@@ -93,17 +93,21 @@ fn run() -> Result<()> {
             window.encoder.clear_depth(&window.output_stencil, 1.0);
             window.encoder.clear_stencil(&window.output_stencil, 0);
 
-            gaia_renderer.set_view_info(
-                camera_controller.camera_position(),
-                get_mvp(&window, &camera_controller),
-            );
+            // gaia_renderer.set_view_info(
+            //     camera_controller.camera_position(),
+            //     get_mvp(&window, &camera_controller),
+            // );
 
             // TODO propagate this error
+            let mvp = get_mvp(&window, &camera_controller);
             gaia_renderer
-                .draw(
+                .render(
                     &mut window.encoder,
                     window.output_color.clone(),
                     window.output_stencil.clone(),
+                    mvp,
+                    camera_controller.look_at(),
+                    camera_controller.camera_height(),
                 )
                 .unwrap();
 
@@ -128,10 +132,10 @@ fn run() -> Result<()> {
         });
 
         e.resize(|_, _| {
-            gaia_renderer.set_view_info(
-                camera_controller.camera_position(),
-                get_mvp(&window, &camera_controller),
-            );
+            // gaia_renderer.set_view_info(
+            //     camera_controller.camera_position(),
+            //     get_mvp(&window, &camera_controller),
+            // );
         });
     }
 
