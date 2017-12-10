@@ -19,7 +19,6 @@ mod asset_getter;
 mod constants;
 mod errors;
 mod render;
-mod renderer;
 mod tile;
 mod tile_chooser;
 mod tile_fetcher;
