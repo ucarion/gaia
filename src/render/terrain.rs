@@ -1,4 +1,4 @@
-use cgmath::{Matrix4, Vector2};
+use cgmath::Matrix4;
 use gfx;
 use gfx::traits::FactoryExt;
 
@@ -53,9 +53,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> TerrainRenderer<R, F> {
         })
     }
 
-    pub fn render<
-        C: gfx::CommandBuffer<R>,
-    >(
+    pub fn render<C: gfx::CommandBuffer<R>>(
         &mut self,
         encoder: &mut gfx::Encoder<R, C>,
         target: gfx::handle::RenderTargetView<R, gfx::format::Srgba8>,

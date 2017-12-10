@@ -71,12 +71,20 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
 
         let mvp = mvp.into();
 
-        let (level_of_detail, tiles_to_render, tiles_to_fetch) =
-            tile_chooser::choose_tiles(&mut self.asset_cache, mvp.clone(), look_at.into(), camera_height);
+        let (level_of_detail, tiles_to_render, tiles_to_fetch) = tile_chooser::choose_tiles(
+            &mut self.asset_cache,
+            mvp.clone(),
+            look_at.into(),
+            camera_height,
+        );
 
         for tile_to_fetch in tiles_to_fetch {
-            self.tile_sender.send(tile_to_fetch).chain_err(|| "Error sending tile to background thread")?;
+            self.tile_sender.send(tile_to_fetch).chain_err(
+                || "Error sending tile to background thread",
+            )?;
         }
+
+        let mut polygon_metadatas = Vec::new();
 
         for (positioned_tile, indices) in tiles_to_render {
             let tile_assets = self.asset_cache.get_mut(&positioned_tile.tile).unwrap();
@@ -90,7 +98,18 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
                 indices,
                 tile_assets,
             );
+
+            polygon_metadatas.push(tile_assets.metadata.clone());
         }
+
+        self.polygon_renderer.render(
+            encoder,
+            target,
+            stencil,
+            mvp,
+            level_of_detail,
+            &polygon_metadatas,
+        );
 
         Ok(())
     }

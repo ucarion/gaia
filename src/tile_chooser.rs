@@ -37,17 +37,16 @@ pub fn choose_tiles<R: gfx::Resources>(
         }
     }
 
-    (
-        desired_level,
-        tiles_to_render,
-        tiles_to_fetch,
-    )
+    (desired_level, tiles_to_render, tiles_to_fetch)
 }
 
-fn desired_tiles(desired_level: u8, look_at: Vector2<f32>, mvp: Matrix4<f32>) -> Vec<PositionedTile> {
+fn desired_tiles(
+    desired_level: u8,
+    look_at: Vector2<f32>,
+    mvp: Matrix4<f32>,
+) -> Vec<PositionedTile> {
     let frustum = Frustum::from_matrix4(mvp).unwrap();
-    let center =
-        PositionedTile::enclosing_point(desired_level, look_at[0], look_at[1]);
+    let center = PositionedTile::enclosing_point(desired_level, look_at[0], look_at[1]);
 
     let center_x = center.position[0];
     let center_y = center.position[1];
