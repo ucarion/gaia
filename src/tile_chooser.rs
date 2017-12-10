@@ -54,7 +54,7 @@ fn desired_tiles(desired_level: u8, look_at: Vector2<f32>, mvp: Matrix4<f32>) ->
 
     // TODO this is coupled with how the camera controller works; a fully correct solution being
     // rather complicated, instead just document this behavior? (and export as a constant?)
-    let num_tiles_around = 5;
+    let num_tiles_around = 6;
     let min_x = center_x - num_tiles_around;
     let max_x = center_x + num_tiles_around;
     let min_y = cmp::max(0, center_y - num_tiles_around);
