@@ -2,13 +2,12 @@
 extern crate error_chain;
 #[macro_use]
 extern crate gfx;
-#[macro_use]
-extern crate lazy_static;
 
 extern crate byteorder;
 extern crate cgmath;
 extern crate collision;
 extern crate gaia_assetgen;
+extern crate gaia_quadtree;
 extern crate gfx_draping;
 extern crate hsl;
 extern crate image;
@@ -19,7 +18,6 @@ mod asset_getter;
 mod constants;
 mod errors;
 mod render;
-mod tile;
 mod tile_chooser;
 mod tile_fetcher;
 

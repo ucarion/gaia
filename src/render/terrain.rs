@@ -3,9 +3,9 @@ use gfx;
 use gfx::traits::FactoryExt;
 
 use asset_getter::TileAssets;
-use constants::ELEVATION_TILE_WIDTH;
+use gaia_assetgen::ELEVATION_TILE_SIZE;
+use gaia_quadtree::Tile;
 use errors::*;
-use tile::PositionedTile;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 gfx_vertex_struct!(Vertex {
@@ -59,8 +59,8 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> TerrainRenderer<R, F> {
         target: gfx::handle::RenderTargetView<R, gfx::format::Srgba8>,
         stencil: gfx::handle::DepthStencilView<R, gfx::format::DepthStencil>,
         mvp: &Matrix4<f32>,
-        positioned_tile: PositionedTile,
-        indices: Vec<u16>,
+        tile: Tile,
+        indices: Vec<u32>,
         tile_assets: &TileAssets<R>,
     ) {
         let slice = gfx::Slice {
@@ -71,12 +71,9 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> TerrainRenderer<R, F> {
             buffer: self.factory.create_index_buffer(&indices[..]),
         };
 
-        let offset = Matrix4::from_translation(positioned_tile.offset().into());
-        let scale = Matrix4::from_nonuniform_scale(
-            positioned_tile.tile.width(),
-            -positioned_tile.tile.width(),
-            1.0,
-        );
+        let offset_by = tile.top_left_position();
+        let offset = Matrix4::from_translation([offset_by[0], offset_by[1], 0.0].into());
+        let scale = Matrix4::from_nonuniform_scale(tile.width(), -tile.width(), 1.0);
 
         let mvp = mvp * offset * scale;
 
@@ -94,9 +91,9 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> TerrainRenderer<R, F> {
 
     fn create_vertex_buffer(factory: &mut F) -> gfx::handle::Buffer<R, Vertex> {
         let mut vertex_data = vec![];
-        for y in 0..ELEVATION_TILE_WIDTH {
-            for x in 0..ELEVATION_TILE_WIDTH {
-                let coord_scale = (ELEVATION_TILE_WIDTH - 1) as f32;
+        for y in 0..ELEVATION_TILE_SIZE {
+            for x in 0..ELEVATION_TILE_SIZE {
+                let coord_scale = (ELEVATION_TILE_SIZE - 1) as f32;
                 vertex_data.push(Vertex {
                     coord: [x as f32 / coord_scale, y as f32 / coord_scale],
                 });

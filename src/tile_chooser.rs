@@ -1,13 +1,12 @@
-use std::cmp;
-
 use cgmath::{Matrix4, Vector2};
-use collision::Frustum;
+use collision::{Aabb3, Frustum, Relation};
+use gaia_assetgen::ELEVATION_TILE_SIZE;
+use gaia_quadtree::{PositionInParent, Tile};
 use gfx;
 use lru_cache::LruCache;
 
-use constants::{ELEVATION_TILE_WIDTH, MAX_TILE_LEVEL};
 use asset_getter::TileAssets;
-use tile::{PositionedTile, PositionInParent, Tile};
+use constants::Z_UPPER_BOUND;
 
 /// Gets tiles that can be rendered immediately, and tiles that should be fetched.
 ///
@@ -21,18 +20,18 @@ pub fn choose_tiles<R: gfx::Resources>(
     mvp: Matrix4<f32>,
     look_at: Vector2<f32>,
     camera_height: f32,
-) -> (u8, Vec<(PositionedTile, Vec<u16>)>, Vec<Tile>) {
+) -> (u8, Vec<(Tile, Vec<u32>)>, Vec<Tile>) {
     let mut tiles_to_render = vec![];
     let mut tiles_to_fetch = vec![];
 
     let desired_level = desired_level(camera_height);
 
     for desired_tile in desired_tiles(desired_level, look_at, mvp) {
-        if !texture_cache.contains_key(&desired_tile.tile) {
-            tiles_to_fetch.push(desired_tile.tile.clone());
+        if !texture_cache.contains_key(&desired_tile.to_origin()) {
+            tiles_to_fetch.push(desired_tile.to_origin());
         }
 
-        if let Some(tile_and_indices) = get_covering_tile(texture_cache, desired_tile.clone()) {
+        if let Some(tile_and_indices) = get_covering_tile(texture_cache, desired_tile) {
             tiles_to_render.push(tile_and_indices);
         }
     }
@@ -40,34 +39,21 @@ pub fn choose_tiles<R: gfx::Resources>(
     (desired_level, tiles_to_render, tiles_to_fetch)
 }
 
-fn desired_tiles(
-    desired_level: u8,
-    look_at: Vector2<f32>,
-    mvp: Matrix4<f32>,
-) -> Vec<PositionedTile> {
+fn desired_tiles(desired_level: u8, look_at: Vector2<f32>, mvp: Matrix4<f32>) -> Vec<Tile> {
     let frustum = Frustum::from_matrix4(mvp).unwrap();
-    let center = PositionedTile::enclosing_point(desired_level, look_at[0], look_at[1]);
+    let center = Tile::enclosing_point(desired_level, look_at.into());
 
-    let center_x = center.position[0];
-    let center_y = center.position[1];
+    let mut result = Vec::new();
 
     // TODO this is coupled with how the camera controller works; a fully correct solution being
     // rather complicated, instead just document this behavior? (and export as a constant?)
     let num_tiles_around = 6;
-    let min_x = center_x - num_tiles_around;
-    let max_x = center_x + num_tiles_around;
-    let min_y = cmp::max(0, center_y - num_tiles_around);
-    let max_y = cmp::min(
-        Tile::num_tiles_across_level_height(desired_level) as i64 - 1,
-        center_y + num_tiles_around,
-    );
 
-    let mut result = vec![];
-    for tile_x in min_x..max_x + 1 {
-        for tile_y in min_y..max_y + 1 {
-            let tile = PositionedTile::from_level_and_position(desired_level, [tile_x, tile_y]);
+    for delta_x in -num_tiles_around..num_tiles_around {
+        for delta_y in -num_tiles_around..num_tiles_around {
+            let tile = center.offset_by(delta_x, delta_y);
 
-            if tile.is_in_frustum(&frustum) {
+            if tile_in_frustum(&tile, &frustum) && !result.contains(&tile) {
                 result.push(tile);
             }
         }
@@ -76,26 +62,34 @@ fn desired_tiles(
     result
 }
 
+fn tile_in_frustum(tile: &Tile, frustum: &Frustum<f32>) -> bool {
+    let a = tile.top_left_position();
+    let b = tile.bottom_right_position();
+    let bounding_box = Aabb3::new([a[0], a[1], 0.0].into(), [b[0], b[1], Z_UPPER_BOUND].into());
+
+    frustum.contains(&bounding_box) != Relation::Out
+}
+
 fn desired_level(camera_height: f32) -> u8 {
     if camera_height < 0.1 {
-        0
+        6
     } else if camera_height < 0.2 {
-        1
+        5
     } else if camera_height < 0.5 {
-        2
+        4
     } else if camera_height < 0.7 {
         3
     } else {
-        4
+        2
     }
 }
 
 fn get_covering_tile<R: gfx::Resources>(
     cache: &mut LruCache<Tile, TileAssets<R>>,
-    tile_to_cover: PositionedTile,
-) -> Option<(PositionedTile, Vec<u16>)> {
+    tile_to_cover: Tile,
+) -> Option<(Tile, Vec<u32>)> {
     find_parent_in_cache(tile_to_cover, cache).and_then(|(parent, quadrant_positions)| {
-        let (mut width, mut left_x, mut top_y) = (ELEVATION_TILE_WIDTH - 1, 0, 0);
+        let (mut width, mut left_x, mut top_y) = (ELEVATION_TILE_SIZE - 1, 0, 0);
 
         for position in quadrant_positions.iter().rev() {
             width = width / 2;
@@ -114,10 +108,10 @@ fn get_covering_tile<R: gfx::Resources>(
         let mut index_data = Vec::new();
         for x in left_x..left_x + width {
             for y in top_y..top_y + width {
-                let a = (x + 0) + (y + 0) * ELEVATION_TILE_WIDTH;
-                let b = (x + 0) + (y + 1) * ELEVATION_TILE_WIDTH;
-                let c = (x + 1) + (y + 0) * ELEVATION_TILE_WIDTH;
-                let d = (x + 1) + (y + 1) * ELEVATION_TILE_WIDTH;
+                let a = (x + 0) + (y + 0) * ELEVATION_TILE_SIZE;
+                let b = (x + 0) + (y + 1) * ELEVATION_TILE_SIZE;
+                let c = (x + 1) + (y + 0) * ELEVATION_TILE_SIZE;
+                let d = (x + 1) + (y + 1) * ELEVATION_TILE_SIZE;
 
                 index_data.extend_from_slice(&[a, b, c, c, b, d]);
             }
@@ -128,21 +122,21 @@ fn get_covering_tile<R: gfx::Resources>(
 }
 
 fn find_parent_in_cache<R: gfx::Resources>(
-    mut tile: PositionedTile,
+    mut tile: Tile,
     cache: &mut LruCache<Tile, TileAssets<R>>,
-) -> Option<(PositionedTile, Vec<PositionInParent>)> {
+) -> Option<(Tile, Vec<PositionInParent>)> {
     let mut quadrant_positions = vec![];
 
     loop {
-        if cache.contains_key(&tile.tile) {
+        if cache.contains_key(&tile.to_origin()) {
             return Some((tile, quadrant_positions));
         }
 
-        if tile.tile.level == MAX_TILE_LEVEL {
-            return None;
+        if let Some(parent) = tile.parent() {
+            quadrant_positions.push(tile.position_in_parent().unwrap());
+            tile = parent;
         } else {
-            quadrant_positions.push(tile.tile.position_in_parent());
-            tile = tile.parent();
+            return None;
         }
     }
 }

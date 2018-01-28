@@ -1,11 +1,8 @@
-extern crate pretty_env_logger;
 extern crate gaia_assetgen;
 
 use gaia_assetgen::PrepareAssetsTask;
 
 fn main() {
-    pretty_env_logger::init().unwrap();
-
     PrepareAssetsTask::new()
         .with_noaa_globe_dir("assets/noaa_globe".into())
         .with_nasa_blue_marble_dir("assets/nasa_blue_marble".into())

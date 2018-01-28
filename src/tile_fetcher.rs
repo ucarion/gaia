@@ -1,8 +1,9 @@
 use std::sync::mpsc;
 
+use gaia_quadtree::Tile;
+
 use errors::*;
 use asset_getter::TileAssetData;
-use tile::Tile;
 
 pub fn fetch_tiles(
     receive_tiles: mpsc::Receiver<Tile>,

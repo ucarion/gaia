@@ -2,14 +2,13 @@ use std::io::BufReader;
 use std::fs::File;
 
 use byteorder::{ReadBytesExt, LittleEndian};
-use gaia_assetgen::TileMetadata;
+use gaia_assetgen::{TileMetadata, ELEVATION_OFFSET, IMAGERY_TILE_SIZE, ELEVATION_TILE_SIZE};
+use gaia_quadtree::Tile;
 use gfx;
-use image;
+use image::{self, ImageDecoder};
 use serde_json;
 
-use constants::{COLOR_TILE_WIDTH, ELEVATION_DATA_OFFSET, ELEVATION_TILE_WIDTH};
 use errors::*;
-use tile::Tile;
 
 pub struct TileAssets<R: gfx::Resources> {
     pub color: gfx::handle::ShaderResourceView<R, [f32; 4]>,
@@ -37,8 +36,8 @@ impl TileAssetData {
         factory: &mut F,
     ) -> Result<TileAssets<R>> {
         let color_texture_kind = gfx::texture::Kind::D2(
-            COLOR_TILE_WIDTH,
-            COLOR_TILE_WIDTH,
+            IMAGERY_TILE_SIZE as u16,
+            IMAGERY_TILE_SIZE as u16,
             gfx::texture::AaMode::Single,
         );
         let (_, color_texture_view) = factory
@@ -49,8 +48,8 @@ impl TileAssetData {
             .chain_err(|| "Could not create color texture")?;
 
         let elevation_texture_kind = gfx::texture::Kind::D2(
-            ELEVATION_TILE_WIDTH,
-            ELEVATION_TILE_WIDTH,
+            ELEVATION_TILE_SIZE as u16,
+            ELEVATION_TILE_SIZE as u16,
             gfx::texture::AaMode::Single,
         );
         let (_, elevation_texture_view) = factory
@@ -84,20 +83,30 @@ fn get_color_data(tile: &Tile) -> Result<Vec<u8>> {
 
 fn get_elevation_data(tile: &Tile) -> Result<Vec<u16>> {
     let path = format!(
-        "assets/generated/tiles/{}_{}_{}.elevation",
+        "assets/generated/tiles/{}_{}_{}.pgm",
         tile.level,
         tile.x,
         tile.y
     );
 
-    let mut file = BufReader::new(File::open(path).chain_err(
-        || "Error reading tile elevation data",
-    )?);
+    let file = File::open(path).chain_err(
+        || "Error opening tile elevation data",
+    )?;
+    let mut decoder = image::pnm::PNMDecoder::new(BufReader::new(file))
+        .chain_err(|| "Error creating tile elevation decoder")?;
+    let decoding_result = decoder.read_image().chain_err(
+        || "Error decoding tile elevation data",
+    )?;
 
-    let mut buf = Vec::new();
-    while let Ok(data_point) = file.read_u16::<LittleEndian>() {
-        let elevation = data_point.saturating_sub(ELEVATION_DATA_OFFSET);
-        buf.push(elevation);
+    let mut buf = match decoding_result {
+        image::DecodingResult::U16(buf) => Ok(buf),
+        image::DecodingResult::U8(_) => Err(
+            "Tile elevation data is in 8-bit depth instead of 16-bit depth",
+        ),
+    }?;
+
+    for elevation in buf.iter_mut() {
+        *elevation = elevation.saturating_sub(ELEVATION_OFFSET);
     }
 
     Ok(buf)

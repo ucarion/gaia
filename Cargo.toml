@@ -4,8 +4,7 @@ version = "0.1.0"
 authors = ["Ulysse Carion <ulysse@ulysse.io>"]
 
 [build-dependencies]
-pretty_env_logger = "0.1"
-gaia_assetgen = { path = "../gaia_assetgen" }
+gaia_assetgen = "0.2.0"
 
 [dependencies]
 byteorder = "1"
@@ -13,12 +12,12 @@ cgmath = "0.15"
 collision = "0.12"
 error-chain = "0.10"
 fps_counter = "0.2"
-gaia_assetgen = { path = "../gaia_assetgen" }
+gaia_assetgen = "0.2.0"
+gaia_quadtree = "0.1.6"
 gfx = "0.16"
 gfx_draping = "0.2"
 hsl = "0.1"
-image = "0.13"
-lazy_static = "0.2"
+image = "0.18"
 lru-cache = "0.1.1"
 piston = "0.32"
 piston3d-cam = "0.3"

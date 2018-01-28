@@ -2,6 +2,7 @@ use std::thread;
 use std::sync::mpsc;
 
 use cgmath::{Matrix4, Vector2};
+use gaia_quadtree::Tile;
 use gfx;
 use lru_cache::LruCache;
 
@@ -12,7 +13,6 @@ use asset_getter::{TileAssets, TileAssetData};
 use errors::*;
 use self::polygon::PolygonRenderer;
 use self::terrain::TerrainRenderer;
-use tile::Tile;
 use tile_chooser;
 use tile_fetcher;
 
@@ -86,15 +86,15 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
 
         let mut polygon_metadatas = Vec::new();
 
-        for (positioned_tile, indices) in tiles_to_render {
-            let tile_assets = self.asset_cache.get_mut(&positioned_tile.tile).unwrap();
+        for (tile, indices) in tiles_to_render {
+            let tile_assets = self.asset_cache.get_mut(&tile.to_origin()).unwrap();
 
             self.terrain_renderer.render(
                 encoder,
                 target.clone(),
                 stencil.clone(),
                 &mvp,
-                positioned_tile,
+                tile,
                 indices,
                 tile_assets,
             );

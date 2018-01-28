@@ -4,14 +4,13 @@ use std::fs::File;
 use std::io::BufReader;
 
 use cgmath::Matrix4;
-use gaia_assetgen::{PolygonPointData, TileMetadata};
+use gaia_assetgen::{PolygonPointData, TileMetadata, MAX_LEVEL};
 use gfx;
 use gfx_draping;
 use hsl::HSL;
 use lru_cache::LruCache;
 use serde_json;
 
-use constants::MAX_TILE_LEVEL;
 use errors::*;
 
 pub struct PolygonRenderer<R: gfx::Resources, F: gfx::Factory<R>> {
@@ -31,8 +30,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
             )?,
         )).chain_err(|| "Error parsing polygons.json")?;
 
-        let mut polygon_buffers =
-            vec![gfx_draping::PolygonBuffer::new(); MAX_TILE_LEVEL as usize + 1];
+        let mut polygon_buffers = vec![gfx_draping::PolygonBuffer::new(); MAX_LEVEL as usize + 1];
         let mut polygon_indices = BTreeMap::new();
         let mut polygon_properties = BTreeMap::new();
 
@@ -108,16 +106,26 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
                     indices.extend(&self.polygon_indices[&(level_of_detail, *polygon_id)]);
                 }
 
-                self.polygon_indices_cache.insert(cache_key.clone(), indices.as_renderable(&mut self.factory));
+                self.polygon_indices_cache.insert(
+                    cache_key.clone(),
+                    indices.as_renderable(
+                        &mut self.factory,
+                    ),
+                );
             }
 
             let indices = self.polygon_indices_cache.get_mut(&cache_key).unwrap();
             let (min_z, max_z) = (elevation_to_z(min_z) - 0.01, elevation_to_z(max_z) + 0.01);
 
-            let transform_polygon = Matrix4::from_nonuniform_scale(1.0, 1.0, (max_z - min_z)) *
+            let transform_polygon = Matrix4::from_nonuniform_scale(2.0, 1.0, (max_z - min_z)) *
                 Matrix4::from_translation([0.0, 0.0, min_z].into());
 
-            let color = [color.0 as f32 / 255.0, color.1 as f32 / 255.0, color.2 as f32 / 255.0, color.3 as f32 / 255.0];
+            let color = [
+                color.0 as f32 / 255.0,
+                color.1 as f32 / 255.0,
+                color.2 as f32 / 255.0,
+                color.3 as f32 / 255.0,
+            ];
 
             self.draping_renderer.render(
                 encoder,
