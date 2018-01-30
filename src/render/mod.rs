@@ -66,7 +66,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
         // Get tiles loaded in background thread, and put them in the cache
         for (tile, tile_texture_data) in self.texture_receiver.try_iter() {
             let assets = tile_texture_data?.create_assets(&mut self.factory)?;
-            self.asset_cache.insert(tile, assets);
+            self.asset_cache.insert(tile.to_origin(), assets);
         }
 
         let mvp = mvp.into();
@@ -88,6 +88,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
 
         for (tile, indices) in tiles_to_render {
             let tile_assets = self.asset_cache.get_mut(&tile.to_origin()).unwrap();
+            polygon_metadatas.push((tile_assets.metadata.clone(), tile.offset));
 
             self.terrain_renderer.render(
                 encoder,
@@ -98,8 +99,6 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
                 indices,
                 tile_assets,
             );
-
-            polygon_metadatas.push(tile_assets.metadata.clone());
         }
 
         self.polygon_renderer.render(

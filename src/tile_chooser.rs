@@ -28,7 +28,7 @@ pub fn choose_tiles<R: gfx::Resources>(
 
     for desired_tile in desired_tiles(desired_level, look_at, mvp) {
         if !texture_cache.contains_key(&desired_tile.to_origin()) {
-            tiles_to_fetch.push(desired_tile.to_origin());
+            tiles_to_fetch.push(desired_tile.clone());
         }
 
         if let Some(tile_and_indices) = get_covering_tile(texture_cache, desired_tile) {

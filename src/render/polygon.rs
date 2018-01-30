@@ -70,10 +70,20 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
         stencil: gfx::handle::DepthStencilView<R, gfx::format::DepthStencil>,
         mvp: Matrix4<f32>,
         level_of_detail: u8,
-        polygon_metadatas: &[TileMetadata],
+        positioned_polygons_to_render: &[(TileMetadata, i16)],
     ) {
-        let mut color_groups = BTreeMap::new();
-        for metadata in polygon_metadatas {
+        // Multiple polygons can only be rendered simultaneously if they share the same color. So
+        // we index polygons to render by their color using `polygon_batches`. The keys in
+        // `polygon_batches` are pairs of (color, offset), where "offset" determines
+        // where in the infinite scrolling map the polygons are situated.
+        //
+        // The key is not just the color because polygons need to be offset in world-space based on
+        // their position in the infinite map. By separating polygons by their color *and* offset,
+        // then a single matrix transformation can apply the offset.
+        let mut polygon_batches = BTreeMap::new();
+
+        // Build up `polygon_batches`.
+        for &(ref metadata, offset) in positioned_polygons_to_render {
             for polygon_id in &metadata.polygons {
                 let properties = &self.polygon_properties[&polygon_id];
 
@@ -86,19 +96,19 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
                 }.to_rgb();
                 let color = (r, g, b, 64u8);
 
-                let color_group = color_groups.entry(color).or_insert((
+                let batch = polygon_batches.entry((color, offset)).or_insert((
                     Vec::new(),
                     f32::INFINITY,
                     f32::NEG_INFINITY,
                 ));
 
-                color_group.0.push(*polygon_id);
-                color_group.1 = color_group.1.min(metadata.min_elevation as f32);
-                color_group.2 = color_group.2.max(metadata.max_elevation as f32);
+                batch.0.push(*polygon_id);
+                batch.1 = batch.1.min(metadata.min_elevation as f32);
+                batch.2 = batch.2.max(metadata.max_elevation as f32);
             }
         }
 
-        for (color, (polygon_ids, min_z, max_z)) in color_groups {
+        for ((color, offset), (polygon_ids, min_z, max_z)) in polygon_batches {
             let cache_key = (level_of_detail, polygon_ids);
             if !self.polygon_indices_cache.contains_key(&cache_key) {
                 let mut indices = gfx_draping::PolygonBufferIndices::new();
@@ -116,9 +126,10 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
 
             let indices = self.polygon_indices_cache.get_mut(&cache_key).unwrap();
             let (min_z, max_z) = (elevation_to_z(min_z) - 0.01, elevation_to_z(max_z) + 0.01);
+            let translate_x = 2.0 * offset as f32;
 
-            let transform_polygon = Matrix4::from_nonuniform_scale(2.0, 1.0, (max_z - min_z)) *
-                Matrix4::from_translation([0.0, 0.0, min_z].into());
+            let transform_polygon = Matrix4::from_translation([translate_x, 0.0, min_z].into()) *
+                Matrix4::from_nonuniform_scale(2.0, 1.0, (max_z - min_z));
 
             let color = [
                 color.0 as f32 / 255.0,
