@@ -1,7 +1,6 @@
 use std::io::BufReader;
 use std::fs::File;
 
-use byteorder::{ReadBytesExt, LittleEndian};
 use gaia_assetgen::{TileMetadata, ELEVATION_OFFSET, IMAGERY_TILE_SIZE, ELEVATION_TILE_SIZE};
 use gaia_quadtree::Tile;
 use gfx;

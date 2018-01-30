@@ -4,10 +4,9 @@ use std::fs::File;
 use std::io::BufReader;
 
 use cgmath::Matrix4;
-use gaia_assetgen::{PolygonPointData, TileMetadata, MAX_LEVEL};
+use gaia_assetgen::{PolygonPointData, PolygonProperties, TileMetadata, MAX_LEVEL};
 use gfx;
 use gfx_draping;
-use hsl::HSL;
 use lru_cache::LruCache;
 use serde_json;
 
@@ -19,7 +18,7 @@ pub struct PolygonRenderer<R: gfx::Resources, F: gfx::Factory<R>> {
     polygon_buffers: Vec<gfx_draping::RenderablePolygonBuffer<R>>,
     polygon_indices: BTreeMap<(u8, u64), gfx_draping::PolygonBufferIndices>,
     polygon_indices_cache: LruCache<(u8, Vec<u64>), gfx_draping::RenderablePolygonIndices<R>>,
-    polygon_properties: BTreeMap<u64, serde_json::Map<String, serde_json::Value>>,
+    polygon_properties: BTreeMap<u64, PolygonProperties>,
 }
 
 impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
@@ -71,6 +70,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
         mvp: Matrix4<f32>,
         level_of_detail: u8,
         positioned_polygons_to_render: &[(TileMetadata, i16)],
+        polygon_color_chooser: &Fn(&PolygonProperties) -> [u8; 4],
     ) {
         // Multiple polygons can only be rendered simultaneously if they share the same color. So
         // we index polygons to render by their color using `polygon_batches`. The keys in
@@ -85,17 +85,9 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
         // Build up `polygon_batches`.
         for &(ref metadata, offset) in positioned_polygons_to_render {
             for polygon_id in &metadata.polygons {
-                let properties = &self.polygon_properties[&polygon_id];
 
-                // TODO make this user-controllable
-                let color_num = properties["MAPCOLOR13"].as_f64().unwrap() as u8;
-                let (r, g, b) = HSL {
-                    h: 360.0 * (color_num as f64 / 13.0),
-                    s: 1.0,
-                    l: 0.3,
-                }.to_rgb();
-                let color = (r, g, b, 64u8);
-
+                let properties = &self.polygon_properties[polygon_id];
+                let color = polygon_color_chooser(properties);
                 let batch = polygon_batches.entry((color, offset)).or_insert((
                     Vec::new(),
                     f32::INFINITY,
@@ -132,10 +124,10 @@ impl<R: gfx::Resources, F: gfx::Factory<R>> PolygonRenderer<R, F> {
                 Matrix4::from_nonuniform_scale(2.0, 1.0, (max_z - min_z));
 
             let color = [
-                color.0 as f32 / 255.0,
-                color.1 as f32 / 255.0,
-                color.2 as f32 / 255.0,
-                color.3 as f32 / 255.0,
+                color[0] as f32 / 255.0,
+                color[1] as f32 / 255.0,
+                color[2] as f32 / 255.0,
+                color[3] as f32 / 255.0,
             ];
 
             self.draping_renderer.render(

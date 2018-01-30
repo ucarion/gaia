@@ -2,6 +2,7 @@ use std::thread;
 use std::sync::mpsc;
 
 use cgmath::{Matrix4, Vector2};
+use gaia_assetgen::PolygonProperties;
 use gaia_quadtree::Tile;
 use gfx;
 use lru_cache::LruCache;
@@ -62,6 +63,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
         mvp: Matrix,
         look_at: Vector,
         camera_height: f32,
+        polygon_color_chooser: &Fn(&PolygonProperties) -> [u8; 4],
     ) -> Result<()> {
         // Get tiles loaded in background thread, and put them in the cache
         for (tile, tile_texture_data) in self.texture_receiver.try_iter() {
@@ -108,6 +110,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
             mvp,
             level_of_detail,
             &polygon_metadatas,
+            polygon_color_chooser,
         );
 
         Ok(())

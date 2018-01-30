@@ -5,7 +5,9 @@ extern crate cam;
 extern crate cgmath;
 extern crate fps_counter;
 extern crate gaia;
+extern crate gaia_assetgen;
 extern crate gfx;
+extern crate hsl;
 extern crate piston;
 extern crate piston_window;
 extern crate vecmath;
@@ -17,7 +19,9 @@ use camera_controller::CameraController;
 use cam::CameraPerspective;
 use cgmath::Matrix4;
 use fps_counter::FPSCounter;
+use gaia_assetgen::PolygonProperties;
 use gfx::Device;
+use hsl::HSL;
 use piston::window::WindowSettings;
 use piston_window::*;
 
@@ -56,6 +60,17 @@ fn main() {
 
         std::process::exit(1);
     }
+}
+
+fn polygon_color_chooser(properties: &PolygonProperties) -> [u8; 4] {
+    let color_num = properties["MAPCOLOR13"].as_f64().unwrap() as u8;
+    let (r, g, b) = HSL {
+        h: 360.0 * (color_num as f64 / 13.0),
+        s: 1.0,
+        l: 0.3,
+    }.to_rgb();
+
+    [r, g, b, 64u8]
 }
 
 fn run() -> Result<()> {
@@ -108,6 +123,7 @@ fn run() -> Result<()> {
                     mvp,
                     camera_controller.look_at(),
                     camera_controller.camera_height(),
+                    &polygon_color_chooser,
                 )
                 .unwrap();
 
