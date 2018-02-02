@@ -1,6 +1,7 @@
 use std::io::BufReader;
 use std::fs::File;
 
+use byteorder::{LittleEndian, ReadBytesExt};
 use gaia_assetgen::{TileMetadata, ELEVATION_OFFSET, IMAGERY_TILE_SIZE, ELEVATION_TILE_SIZE};
 use gaia_quadtree::Tile;
 use gfx;
@@ -82,30 +83,19 @@ fn get_color_data(tile: &Tile) -> Result<Vec<u8>> {
 
 fn get_elevation_data(tile: &Tile) -> Result<Vec<u16>> {
     let path = format!(
-        "assets/generated/tiles/{}_{}_{}.pgm",
+        "assets/generated/tiles/{}_{}_{}.gray",
         tile.level,
         tile.x,
         tile.y
     );
 
-    let file = File::open(path).chain_err(
+    let mut file = BufReader::new(File::open(&path).chain_err(
         || "Error opening tile elevation data",
-    )?;
-    let mut decoder = image::pnm::PNMDecoder::new(BufReader::new(file))
-        .chain_err(|| "Error creating tile elevation decoder")?;
-    let decoding_result = decoder.read_image().chain_err(
-        || "Error decoding tile elevation data",
-    )?;
+    )?);
 
-    let mut buf = match decoding_result {
-        image::DecodingResult::U16(buf) => Ok(buf),
-        image::DecodingResult::U8(_) => Err(
-            "Tile elevation data is in 8-bit depth instead of 16-bit depth",
-        ),
-    }?;
-
-    for elevation in buf.iter_mut() {
-        *elevation = elevation.saturating_sub(ELEVATION_OFFSET);
+    let mut buf = Vec::new();
+    while let Ok(elevation) = file.read_u16::<LittleEndian>() {
+        buf.push(elevation.saturating_sub(ELEVATION_OFFSET));
     }
 
     Ok(buf)

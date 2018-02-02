@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Ulysse Carion <ulysse@ulysse.io>"]
 
 [build-dependencies]
-gaia_assetgen = "0.2.0"
+gaia_assetgen = "0.2.1"
 
 [dependencies]
 byteorder = "1"
@@ -12,7 +12,7 @@ cgmath = "0.15"
 collision = "0.12"
 error-chain = "0.10"
 fps_counter = "0.2"
-gaia_assetgen = "0.2.0"
+gaia_assetgen = "0.2.1"
 gaia_quadtree = "0.1.7"
 gfx = "0.16"
 gfx_draping = "0.2"
