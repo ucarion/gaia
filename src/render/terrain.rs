@@ -2,10 +2,10 @@ use cgmath::Matrix4;
 use gfx;
 use gfx::traits::FactoryExt;
 
-use asset_getter::TileAssets;
+use errors::*;
 use gaia_assetgen::ELEVATION_TILE_SIZE;
 use gaia_quadtree::Tile;
-use errors::*;
+use tile_asset_getter::TileAssets;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 gfx_vertex_struct!(Vertex {

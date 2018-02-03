@@ -10,10 +10,10 @@ use lru_cache::LruCache;
 mod terrain;
 mod polygon;
 
-use asset_getter::{TileAssets, TileAssetData};
 use errors::*;
 use self::polygon::PolygonRenderer;
 use self::terrain::TerrainRenderer;
+use tile_asset_getter::{TileAssets, TileAssetData};
 use tile_chooser;
 use tile_fetcher;
 

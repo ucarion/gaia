@@ -5,8 +5,8 @@ use gaia_quadtree::{PositionInParent, Tile};
 use gfx;
 use lru_cache::LruCache;
 
-use asset_getter::TileAssets;
 use constants::Z_UPPER_BOUND;
+use tile_asset_getter::TileAssets;
 
 /// Gets tiles that can be rendered immediately, and tiles that should be fetched.
 ///
