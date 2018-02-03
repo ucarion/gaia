@@ -64,6 +64,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
         look_at: Vector,
         camera_height: f32,
         polygon_color_chooser: &Fn(&PolygonProperties) -> [u8; 4],
+        level_chooser: &Fn(f32) -> u8,
     ) -> Result<()> {
         // Get tiles loaded in background thread, and put them in the cache
         for (tile, tile_texture_data) in self.texture_receiver.try_iter() {
@@ -74,6 +75,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
         let mvp = mvp.into();
 
         let (level_of_detail, tiles_to_render, tiles_to_fetch) = tile_chooser::choose_tiles(
+            level_chooser,
             &mut self.asset_cache,
             mvp.clone(),
             look_at.into(),

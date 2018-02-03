@@ -46,6 +46,20 @@ fn get_mvp(window: &PistonWindow, camera_controller: &CameraController) -> Matri
     ).into()
 }
 
+fn desired_level(camera_height: f32) -> u8 {
+    if camera_height < 0.1 {
+        5
+    } else if camera_height < 0.2 {
+        4
+    } else if camera_height < 0.5 {
+        3
+    } else if camera_height < 0.7 {
+        2
+    } else {
+        1
+    }
+}
+
 fn main() {
     if let Err(ref e) = run() {
         println!("error: {}", e);
@@ -124,6 +138,7 @@ fn run() -> Result<()> {
                     camera_controller.look_at(),
                     camera_controller.camera_height(),
                     &polygon_color_chooser,
+                    &desired_level,
                 )
                 .unwrap();
 

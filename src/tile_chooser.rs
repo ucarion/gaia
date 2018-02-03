@@ -16,6 +16,7 @@ use constants::Z_UPPER_BOUND;
 /// `tiles_to_fetch` is the desired tiles for the current camera position that are not in cache.
 /// These should be fetched and put into cache, so that future calls to this function can use them.
 pub fn choose_tiles<R: gfx::Resources>(
+    level_chooser: &Fn(f32) -> u8,
     texture_cache: &mut LruCache<Tile, TileAssets<R>>,
     mvp: Matrix4<f32>,
     look_at: Vector2<f32>,
@@ -24,7 +25,7 @@ pub fn choose_tiles<R: gfx::Resources>(
     let mut tiles_to_render = vec![];
     let mut tiles_to_fetch = vec![];
 
-    let desired_level = desired_level(camera_height);
+    let desired_level = level_chooser(camera_height);
 
     for desired_tile in desired_tiles(desired_level, look_at, mvp) {
         if !texture_cache.contains_key(&desired_tile.to_origin()) {
@@ -68,20 +69,6 @@ fn tile_in_frustum(tile: &Tile, frustum: &Frustum<f32>) -> bool {
     let bounding_box = Aabb3::new([a[0], a[1], 0.0].into(), [b[0], b[1], Z_UPPER_BOUND].into());
 
     frustum.contains(&bounding_box) != Relation::Out
-}
-
-fn desired_level(camera_height: f32) -> u8 {
-    if camera_height < 0.1 {
-        6
-    } else if camera_height < 0.2 {
-        5
-    } else if camera_height < 0.5 {
-        4
-    } else if camera_height < 0.7 {
-        3
-    } else {
-        2
-    }
 }
 
 fn get_covering_tile<R: gfx::Resources>(
