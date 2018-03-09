@@ -9,6 +9,7 @@ extern crate collision;
 extern crate gaia_assetgen;
 extern crate gaia_quadtree;
 extern crate gfx_draping;
+extern crate gfx_glyph;
 extern crate hsl;
 extern crate image;
 extern crate lru_cache;
@@ -23,3 +24,4 @@ mod tile_fetcher;
 
 pub use errors::{Error, ErrorKind, Result};
 pub use render::Renderer;
+pub use render::polygon::LabelStyle;

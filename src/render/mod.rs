@@ -2,18 +2,18 @@ use std::thread;
 use std::sync::mpsc;
 
 use cgmath::{Matrix4, Vector2};
-use gaia_assetgen::PolygonProperties;
+use gaia_assetgen::Properties;
 use gaia_quadtree::Tile;
 use gfx;
 use lru_cache::LruCache;
 
-mod terrain;
-mod polygon;
+pub mod terrain;
+pub mod polygon;
 
 use errors::*;
-use self::polygon::PolygonRenderer;
+use self::polygon::{LabelStyle, PolygonRenderer};
 use self::terrain::TerrainRenderer;
-use tile_asset_getter::{TileAssets, TileAssetData};
+use tile_asset_getter::{TileAssetData, TileAssets};
 use tile_chooser;
 use tile_fetcher;
 
@@ -36,9 +36,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
 
         thread::Builder::new()
             .name("tile_fetcher".to_string())
-            .spawn(move || {
-                tile_fetcher::fetch_tiles(tile_receiver, texture_sender)
-            })
+            .spawn(move || tile_fetcher::fetch_tiles(tile_receiver, texture_sender))
             .chain_err(|| "Error creating texture loader thread")?;
 
         Ok(Renderer {
@@ -63,7 +61,8 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
         mvp: Matrix,
         look_at: Vector,
         camera_height: f32,
-        polygon_color_chooser: &Fn(&PolygonProperties) -> [u8; 4],
+        polygon_color_chooser: &Fn(&Properties) -> [u8; 4],
+        label_style_chooser: &Fn(&Properties) -> LabelStyle,
         level_chooser: &Fn(f32) -> u8,
     ) -> Result<()> {
         // Get tiles loaded in background thread, and put them in the cache
@@ -83,9 +82,9 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
         );
 
         for tile_to_fetch in tiles_to_fetch {
-            self.tile_sender.send(tile_to_fetch).chain_err(
-                || "Error sending tile to background thread",
-            )?;
+            self.tile_sender
+                .send(tile_to_fetch)
+                .chain_err(|| "Error sending tile to background thread")?;
         }
 
         let mut polygon_metadatas = Vec::new();
@@ -113,6 +112,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
             level_of_detail,
             &polygon_metadatas,
             polygon_color_chooser,
+            label_style_chooser,
         );
 
         Ok(())

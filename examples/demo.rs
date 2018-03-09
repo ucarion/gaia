@@ -19,7 +19,7 @@ use camera_controller::CameraController;
 use cam::CameraPerspective;
 use cgmath::Matrix4;
 use fps_counter::FPSCounter;
-use gaia_assetgen::PolygonProperties;
+use gaia_assetgen::Properties;
 use gfx::Device;
 use hsl::HSL;
 use piston::window::WindowSettings;
@@ -76,7 +76,7 @@ fn main() {
     }
 }
 
-fn polygon_color_chooser(properties: &PolygonProperties) -> [u8; 4] {
+fn polygon_color_chooser(properties: &Properties) -> [u8; 4] {
     let color_num = properties["MAPCOLOR13"].as_f64().unwrap() as u8;
     let (r, g, b) = HSL {
         h: 360.0 * (color_num as f64 / 13.0),
@@ -87,6 +87,17 @@ fn polygon_color_chooser(properties: &PolygonProperties) -> [u8; 4] {
     [r, g, b, 64u8]
 }
 
+fn label_style_chooser(properties: &Properties) -> gaia::LabelStyle {
+    let text = properties["NAME"].as_str().unwrap();
+    gaia::LabelStyle {
+        text,
+        scale: 20.0,
+        text_color: [1.0, 1.0, 1.0, 1.0],
+        border_color: [0.0, 0.0, 0.0, 1.0],
+        border_width: 1.0,
+    }
+}
+
 fn run() -> Result<()> {
     let mut window: PistonWindow = WindowSettings::new("Gaia", [960, 520])
         .exit_on_esc(true)
@@ -95,16 +106,18 @@ fn run() -> Result<()> {
         .map_err(Error::from)?;
 
     let mut camera_controller = CameraController::new();
-    let mut gaia_renderer = gaia::Renderer::new(window.factory.clone()).chain_err(
-        || "Could not create renderer",
-    )?;
+    let mut gaia_renderer =
+        gaia::Renderer::new(window.factory.clone()).chain_err(|| "Could not create renderer")?;
 
     let mut fps_counter = FPSCounter::new();
     let mut fps = 0;
 
     // TODO get the actual error, but it's not std::error::Error
-    let mut glyphs = Glyphs::new("assets/fonts/FiraSans-Regular.ttf", window.factory.clone())
-        .map_err(|_err| Error::from("glyph error"))?;
+    let mut glyphs = Glyphs::new(
+        "assets/fonts/FiraSans-Regular.ttf",
+        window.factory.clone(),
+        piston_window::texture::TextureSettings::new(),
+    ).map_err(|_err| Error::from("glyph error"))?;
 
     // gaia_renderer.set_view_info(
     //     camera_controller.camera_position(),
@@ -115,10 +128,9 @@ fn run() -> Result<()> {
         camera_controller.event(&e);
 
         window.draw_3d(&e, |window| {
-            window.encoder.clear(
-                &window.output_color,
-                [0.3, 0.3, 0.3, 1.0],
-            );
+            window
+                .encoder
+                .clear(&window.output_color, [0.3, 0.3, 0.3, 1.0]);
             window.encoder.clear_depth(&window.output_stencil, 1.0);
             window.encoder.clear_stencil(&window.output_stencil, 0);
 
@@ -138,6 +150,7 @@ fn run() -> Result<()> {
                     camera_controller.look_at(),
                     camera_controller.camera_height(),
                     &polygon_color_chooser,
+                    &label_style_chooser,
                     &desired_level,
                 )
                 .unwrap();
@@ -150,11 +163,7 @@ fn run() -> Result<()> {
         window.draw_2d(&e, |context, graphics| {
             let camera_height = camera_controller.camera_position()[2];
             text::Text::new_color([0.0, 0.0, 0.0, 1.0], 10).draw(
-                &format!(
-                    "FPS: {} - Camera height: {}",
-                    fps,
-                    camera_height
-                ),
+                &format!("FPS: {} - Camera height: {}", fps, camera_height),
                 &mut glyphs,
                 &context.draw_state,
                 context.transform.trans(10.0, 10.0),

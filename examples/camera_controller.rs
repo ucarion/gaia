@@ -85,22 +85,28 @@ impl CameraController {
             self.velocity[2] += scroll * INITIAL_HEIGHT_VELOCITY;
         });
 
-        e.press(|button| { self.set_drag_if_middle(button, true); });
+        e.press(|button| {
+            self.set_drag_if_middle(button, true);
+        });
 
-        e.release(|button| { self.set_drag_if_middle(button, false); });
+        e.release(|button| {
+            self.set_drag_if_middle(button, false);
+        });
 
-        e.mouse_relative(|x, y| if self.dragging {
-            let t = (self.height - MIN_HEIGHT) / (MAX_HEIGHT - MIN_HEIGHT);
-            let drag_distance_per_pixel = linear_interpolate(
-                DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT,
-                DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT,
-                t,
-            );
+        e.mouse_relative(|x, y| {
+            if self.dragging {
+                let t = (self.height - MIN_HEIGHT) / (MAX_HEIGHT - MIN_HEIGHT);
+                let drag_distance_per_pixel = linear_interpolate(
+                    DRAG_DISTANCE_PER_PIXEL_MIN_HEIGHT,
+                    DRAG_DISTANCE_PER_PIXEL_MAX_HEIGHT,
+                    t,
+                );
 
-            self.look_at[0] -= x as f32 * drag_distance_per_pixel;
-            self.look_at[1] += y as f32 * drag_distance_per_pixel;
+                self.look_at[0] -= x as f32 * drag_distance_per_pixel;
+                self.look_at[1] += y as f32 * drag_distance_per_pixel;
 
-            self.look_at[1] = clamp(MIN_Y, MAX_Y, self.look_at[1]);
+                self.look_at[1] = clamp(MIN_Y, MAX_Y, self.look_at[1]);
+            }
         });
     }
 
