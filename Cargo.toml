@@ -1,6 +1,8 @@
 [package]
 name = "gaia"
 version = "0.1.0"
+description = "A terrain rendering engine for gfx applications"
+license = "MIT"
 authors = ["Ulysse Carion <ulysse@ulysse.io>"]
 
 [dependencies]
