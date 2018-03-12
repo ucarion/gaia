@@ -2,11 +2,10 @@
 name = "gaia_assetgen"
 description = "Prepares Gaia assets, for use in build scripts"
 license = "MIT"
-repository = "https://github.com/ucarion/gaia_assetgen"
-documentation = "https://docs.rs/ucarion/gaia_assetgen"
+repository = "https://github.com/ucarion/gaia"
+documentation = "https://docs.rs/gaia_assetgen"
 version = "0.3.1"
-authors = ["Ulysse Carion <ulysse@ulysse.io>"]
-workspace = "../"
+authors = ["Ulysse Carion <ulyssecarion@gmail.com>"]
 
 [dependencies]
 error-chain = "0.11"
