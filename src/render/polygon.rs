@@ -73,7 +73,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> PolygonRenderer<R, F> {
         let draping_renderer = gfx_draping::DrapingRenderer::new(&mut factory);
 
         let glyph_brush = gfx_glyph::GlyphBrushBuilder::using_font_bytes(include_bytes!(
-            "../../assets/fonts/FiraSans-Regular.ttf"
+            "../../FiraSans-Regular.ttf"
         ) as &[u8])
             .build(factory.clone());
 

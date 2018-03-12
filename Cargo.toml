@@ -3,9 +3,6 @@ name = "gaia"
 version = "0.1.0"
 authors = ["Ulysse Carion <ulysse@ulysse.io>"]
 
-[build-dependencies]
-gaia_assetgen = "0.3.1"
-
 [dependencies]
 byteorder = "1"
 cgmath = "0.15"
@@ -25,3 +22,5 @@ piston3d-cam = "0.3"
 piston_window = "0.77"
 serde_json = "1.0"
 vecmath = "0.3"
+
+[workspace]
