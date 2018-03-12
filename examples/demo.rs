@@ -87,14 +87,19 @@ fn polygon_color_chooser(properties: &Properties) -> [u8; 4] {
     [r, g, b, 64u8]
 }
 
-fn label_style_chooser(properties: &Properties) -> gaia::LabelStyle {
-    let text = properties["NAME"].as_str().unwrap();
-    gaia::LabelStyle {
-        text,
-        scale: 20.0,
-        text_color: [1.0, 1.0, 1.0, 1.0],
-        border_color: [0.0, 0.0, 0.0, 1.0],
-        border_width: 1.0,
+fn label_style_chooser(properties: &Properties) -> Option<gaia::LabelStyle> {
+    let is_capital = properties["ADM0CAP"].as_f64().unwrap() == 1.0;
+    if is_capital {
+        let text = properties["NAME"].as_str().unwrap();
+        Some(gaia::LabelStyle {
+            text,
+            scale: 20.0,
+            text_color: [1.0, 1.0, 1.0, 1.0],
+            border_color: [0.0, 0.0, 0.0, 1.0],
+            border_width: 1.0,
+        })
+    } else {
+        None
     }
 }
 

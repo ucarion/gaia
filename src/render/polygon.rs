@@ -99,7 +99,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> PolygonRenderer<R, F> {
         level_of_detail: u8,
         positioned_polygons_to_render: &[(TileMetadata, i16)],
         polygon_color_chooser: &Fn(&Properties) -> [u8; 4],
-        label_style_chooser: &Fn(&Properties) -> LabelStyle,
+        label_style_chooser: &Fn(&Properties) -> Option<LabelStyle>,
     ) {
         // Multiple polygons can only be rendered simultaneously if they share the same color. So
         // we index polygons to render by their color using `polygon_batches`. The keys in
@@ -168,68 +168,68 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> PolygonRenderer<R, F> {
         for &(ref metadata, offset) in positioned_polygons_to_render {
             for point_id in &metadata.points {
                 let point_properties = &self.point_properties[point_id];
-                let label_style = label_style_chooser(point_properties);
+                if let Some(label_style) = label_style_chooser(point_properties) {
+                    let point = &self.points[*point_id as usize];
 
-                let point = &self.points[*point_id as usize];
+                    let z = elevation_to_z(point.levels[level_of_detail as usize]);
+                    let position = [2.0 * point.coordinates[0], point.coordinates[1], z, 1.0];
+                    let screen_position: Vector4<f32> = mvp * Vector4::from(position);
 
-                let z = elevation_to_z(point.levels[level_of_detail as usize]);
-                let position = [2.0 * point.coordinates[0], point.coordinates[1], z, 1.0];
-                let screen_position: Vector4<f32> = mvp * Vector4::from(position);
+                    let (width, height, ..) = target.get_dimensions();
+                    let (width, height) = (width as f32, height as f32);
+                    let screen_position_x =
+                        (width / 2.0) * (1.0 + screen_position.x / screen_position.w);
+                    let screen_position_y =
+                        (height / 2.0) * (1.0 - screen_position.y / screen_position.w);
 
-                let (width, height, ..) = target.get_dimensions();
-                let (width, height) = (width as f32, height as f32);
-                let screen_position_x =
-                    (width / 2.0) * (1.0 + screen_position.x / screen_position.w);
-                let screen_position_y =
-                    (height / 2.0) * (1.0 - screen_position.y / screen_position.w);
+                    let section = gfx_glyph::Section {
+                        text: label_style.text,
+                        scale: gfx_glyph::Scale::uniform(label_style.scale),
+                        ..gfx_glyph::Section::default()
+                    };
 
-                let section = gfx_glyph::Section {
-                    text: label_style.text,
-                    scale: gfx_glyph::Scale::uniform(label_style.scale),
-                    ..gfx_glyph::Section::default()
-                };
+                    self.glyph_brush.queue(gfx_glyph::Section {
+                        screen_position: (
+                            screen_position_x + label_style.border_width,
+                            screen_position_y,
+                        ),
+                        color: label_style.border_color,
+                        ..section
+                    });
 
-                self.glyph_brush.queue(gfx_glyph::Section {
-                    screen_position: (
-                        screen_position_x + label_style.border_width,
-                        screen_position_y,
-                    ),
-                    color: label_style.border_color,
-                    ..section
-                });
+                    self.glyph_brush.queue(gfx_glyph::Section {
+                        screen_position: (
+                            screen_position_x - label_style.border_width,
+                            screen_position_y,
+                        ),
+                        color: label_style.border_color,
+                        ..section
+                    });
 
-                self.glyph_brush.queue(gfx_glyph::Section {
-                    screen_position: (
-                        screen_position_x - label_style.border_width,
-                        screen_position_y,
-                    ),
-                    color: label_style.border_color,
-                    ..section
-                });
+                    self.glyph_brush.queue(gfx_glyph::Section {
+                        screen_position: (
+                            screen_position_x,
+                            screen_position_y + label_style.border_width,
+                        ),
+                        color: label_style.border_color,
+                        ..section
+                    });
 
-                self.glyph_brush.queue(gfx_glyph::Section {
-                    screen_position: (
-                        screen_position_x,
-                        screen_position_y + label_style.border_width,
-                    ),
-                    color: label_style.border_color,
-                    ..section
-                });
+                    self.glyph_brush.queue(gfx_glyph::Section {
+                        screen_position: (
+                            screen_position_x,
+                            screen_position_y - label_style.border_width,
+                        ),
+                        color: label_style.border_color,
+                        ..section
+                    });
 
-                self.glyph_brush.queue(gfx_glyph::Section {
-                    screen_position: (
-                        screen_position_x,
-                        screen_position_y - label_style.border_width,
-                    ),
-                    color: label_style.border_color,
-                    ..section
-                });
-
-                self.glyph_brush.queue(gfx_glyph::Section {
-                    screen_position: (screen_position_x, screen_position_y),
-                    color: label_style.text_color,
-                    ..section
-                });
+                    self.glyph_brush.queue(gfx_glyph::Section {
+                        screen_position: (screen_position_x, screen_position_y),
+                        color: label_style.text_color,
+                        ..section
+                    });
+                }
             }
         }
 
