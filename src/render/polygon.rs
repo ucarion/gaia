@@ -98,7 +98,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> PolygonRenderer<R, F> {
         mvp: Matrix4<f32>,
         level_of_detail: u8,
         positioned_polygons_to_render: &[(TileMetadata, i16)],
-        polygon_color_chooser: &Fn(&Properties) -> [u8; 4],
+        polygon_color_chooser: &Fn(&Properties) -> Option<[u8; 4]>,
         label_style_chooser: &Fn(&Properties) -> Option<LabelStyle>,
     ) {
         // Multiple polygons can only be rendered simultaneously if they share the same color. So
@@ -115,16 +115,17 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> PolygonRenderer<R, F> {
         for &(ref metadata, offset) in positioned_polygons_to_render {
             for polygon_id in &metadata.polygons {
                 let properties = &self.polygon_properties[polygon_id];
-                let color = polygon_color_chooser(properties);
-                let batch = polygon_batches.entry((color, offset)).or_insert((
-                    Vec::new(),
-                    f32::INFINITY,
-                    f32::NEG_INFINITY,
-                ));
+                if let Some(color) = polygon_color_chooser(properties) {
+                    let batch = polygon_batches.entry((color, offset)).or_insert((
+                        Vec::new(),
+                        f32::INFINITY,
+                        f32::NEG_INFINITY,
+                    ));
 
-                batch.0.push(*polygon_id);
-                batch.1 = batch.1.min(metadata.min_elevation as f32);
-                batch.2 = batch.2.max(metadata.max_elevation as f32);
+                    batch.0.push(*polygon_id);
+                    batch.1 = batch.1.min(metadata.min_elevation as f32);
+                    batch.2 = batch.2.max(metadata.max_elevation as f32);
+                }
             }
         }
 

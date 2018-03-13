@@ -61,7 +61,7 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> Renderer<R, F> {
         mvp: Matrix,
         look_at: Vector,
         camera_height: f32,
-        polygon_color_chooser: &Fn(&Properties) -> [u8; 4],
+        polygon_color_chooser: &Fn(&Properties) -> Option<[u8; 4]>,
         label_style_chooser: &Fn(&Properties) -> Option<LabelStyle>,
         level_chooser: &Fn(f32) -> u8,
     ) -> Result<()> {
