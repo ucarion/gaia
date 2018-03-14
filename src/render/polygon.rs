@@ -173,7 +173,12 @@ impl<R: gfx::Resources, F: gfx::Factory<R> + Clone> PolygonRenderer<R, F> {
                     let point = &self.points[*point_id as usize];
 
                     let z = elevation_to_z(point.levels[level_of_detail as usize]);
-                    let position = [2.0 * point.coordinates[0], point.coordinates[1], z, 1.0];
+                    let position = [
+                        2.0 * (point.coordinates[0] + offset as f32),
+                        point.coordinates[1],
+                        z,
+                        1.0,
+                    ];
                     let screen_position: Vector4<f32> = mvp * Vector4::from(position);
 
                     let (width, height, ..) = target.get_dimensions();
