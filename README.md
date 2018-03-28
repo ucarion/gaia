@@ -1,4 +1,4 @@
-[![YouTube Demo Video](https://img.youtube.com/vi/rQFangmadiw/0.jpg)](https://www.youtube.com/watch?v=rQFangmadiw)
+[![YouTube Demo Video](https://img.youtube.com/vi/cRsTWwsw5y0/0.jpg)](https://www.youtube.com/watch?v=cRsTWwsw5y0)
 
 > Click the image above to see a video demo and high-level overview of this
 > project.
