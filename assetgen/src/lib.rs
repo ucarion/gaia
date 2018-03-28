@@ -167,7 +167,7 @@ impl PrepareAssetsTask {
 
     pub fn run(&self) -> Result<()> {
         if !self.tiles_dir().is_dir() {
-            fs::create_dir(&self.tiles_dir()).chain_err(|| "Could not create tiles directory")?;
+            fs::create_dir_all(&self.tiles_dir()).chain_err(|| "Could not create tiles directory")?;
         }
 
         self.create_nasa_max_level_tiles()?;
